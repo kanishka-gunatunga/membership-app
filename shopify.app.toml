@@ -1,0 +1,81 @@
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = ""
+name = "Membership Pricing"
+application_url = "https://example.com"
+embedded = true
+
+[access_scopes]
+scopes = "read_metaobjects,write_metaobjects,write_metaobject_definitions,write_discounts,read_products,write_products"
+use_legacy_install_flow = false
+
+[product.metafields.app.member_price]
+type = "money"
+name = "Member price"
+description = "Special price for logged-in members (Level 1). Leave empty to use variant price."
+access.admin = "merchant_read_write"
+access.storefront = "public_read"
+
+[variant.metafields.app.member_price]
+type = "money"
+name = "Member price"
+description = "Overrides product member price for this variant."
+access.admin = "merchant_read_write"
+access.storefront = "public_read"
+
+[metaobjects.app.membership_config]
+name = "Membership Config"
+description = "Global membership pricing settings for the shop"
+display_name_field = "title"
+
+  [metaobjects.app.membership_config.access]
+  admin = "merchant_read_write"
+  storefront = "public_read"
+
+[metaobjects.app.membership_config.fields.title]
+name = "Title"
+type = "single_line_text_field"
+required = true
+
+[metaobjects.app.membership_config.fields.enabled]
+name = "Membership pricing enabled"
+type = "boolean"
+
+[metaobjects.app.membership_config.fields.member_label]
+name = "Member label"
+type = "single_line_text_field"
+
+[metaobjects.app.membership_config.fields.savings_label]
+name = "Savings label"
+type = "single_line_text_field"
+
+[discount.metafields.app.membership_config]
+type = "json"
+name = "Membership function config"
+access.admin = "merchant_read_write"
+access.storefront = "none"
+
+[webhooks]
+api_version = "2026-04"
+
+  [[webhooks.subscriptions]]
+  compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
+  uri = "/webhooks/compliance"
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/app/uninstalled"
+  topics = ["app/uninstalled"]
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/app/scopes_update"
+  topics = ["app/scopes_update"]
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/orders/paid"
+  topics = ["orders/paid"]
+
+[auth]
+redirect_urls = ["https://example.com/auth/callback"]
+
+[build]
+automatically_update_urls_on_dev = true

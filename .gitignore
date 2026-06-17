@@ -1,0 +1,90 @@
+# Dependencies
+node_modules/
+
+# Environment & secrets (never commit)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build & cache
+/.cache/
+/build/
+/dist/
+*.tsbuildinfo
+.turbo/
+.eslintcache
+
+# React Router (auto-generated)
+.react-router/
+
+# App build outputs
+/app/build/
+/app/public/build/
+/public/build/
+/public/_dev/
+
+# Prisma / local databases
+/prisma/dev.sqlite
+/prisma/dev.sqlite-journal
+database.sqlite
+*.sqlite
+*.sqlite-journal
+
+# Shopify CLI (local dev artifacts)
+.shopify/
+.shopify.lock
+
+# Extension build output
+/extensions/*/dist/
+/extensions/*/generated/
+
+# Test & coverage
+coverage/
+.nyc_output/
+
+# IDE & editor
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+.history/
+
+# Local assistant / MCP config
+.cursor/
+.gemini/
+.mcp.json
+.claude/
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Optional deploy / hosting
+.vercel/
+.netlify/
+
+# Docker local overrides (keep Dockerfile tracked)
+docker-compose.override.yml
+
+# Misc
+*.local
+agent-tools/

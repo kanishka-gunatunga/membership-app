@@ -1,0 +1,81 @@
+{%- liquid
+  assign current_variant = product.selected_or_first_available_variant
+  assign variant_member_metafield = current_variant.metafields['$app'].member_price
+  assign product_member_metafield = product.metafields['$app'].member_price
+  assign member_metafield = variant_member_metafield | default: product_member_metafield
+  assign compare_cents = current_variant.price
+  assign member_cents = 0
+
+  if member_metafield != blank and member_metafield.value != blank
+    if member_metafield.value.amount != blank
+      assign member_cents = member_metafield.value.amount | times: 100 | round
+    else
+      assign member_cents = member_metafield.value | money_without_currency | remove: ',' | times: 100 | round
+    endif
+  endif
+
+  assign has_member_price = false
+  if member_cents > 0 and compare_cents > member_cents
+    assign has_member_price = true
+  endif
+
+  assign savings_cents = compare_cents | minus: member_cents
+-%}
+
+<div class="member-pricing" {{ block.shopify_attributes }}>
+  {%- if has_member_price -%}
+    {%- if customer or request.design_mode -%}
+      <p class="member-pricing__label">{{ block.settings.member_label | escape }}</p>
+      <p class="member-pricing__price">{{ member_cents | money }}</p>
+      <p class="member-pricing__compare">{{ compare_cents | money }}</p>
+      <p class="member-pricing__savings">
+        {{ block.settings.savings_label | escape }} {{ savings_cents | money }}
+      </p>
+      {%- if request.design_mode and customer == nil -%}
+        <p class="member-pricing__placeholder">Preview: customers will need to log in on the live store.</p>
+      {%- endif -%}
+    {%- else -%}
+      <p class="member-pricing__prompt">
+        {{ block.settings.login_prompt | escape }}
+        <a href="{{ routes.account_login_url }}?return_url={{ request.path | url_encode }}">
+          Log in
+        </a>
+      </p>
+    {%- endif -%}
+  {%- elsif request.design_mode -%}
+    <p class="member-pricing__placeholder">
+      Member pricing appears here when a product or variant has a Member price metafield lower than the regular price.
+    </p>
+  {%- endif -%}
+</div>
+
+{% schema %}
+{
+  "name": "Member pricing",
+  "target": "section",
+  "enabled_on": {
+    "templates": ["product"]
+  },
+  "stylesheet": "member-pricing.css",
+  "settings": [
+    {
+      "type": "text",
+      "id": "member_label",
+      "label": "Member price label",
+      "default": "Member price"
+    },
+    {
+      "type": "text",
+      "id": "savings_label",
+      "label": "Savings label",
+      "default": "You save"
+    },
+    {
+      "type": "text",
+      "id": "login_prompt",
+      "label": "Login prompt",
+      "default": "Log in to unlock member pricing"
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,4 @@
+{
+  "name": "Member pricing discount",
+  "description": "Applies member pricing discounts for logged-in customers at checkout."
+}

@@ -1,0 +1,55 @@
+query CartInput {
+  cart {
+    buyerIdentity {
+      isAuthenticated
+      customer {
+        id
+      }
+    }
+    lines {
+      id
+      quantity
+      cost {
+        amountPerQuantity {
+          amount
+        }
+        subtotalAmount {
+          amount
+        }
+      }
+      merchandise {
+        __typename
+        ... on ProductVariant {
+          id
+          memberPrice: metafield(key: "member_price") {
+            jsonValue
+          }
+          product {
+            memberPrice: metafield(key: "member_price") {
+              jsonValue
+            }
+          }
+        }
+      }
+    }
+  }
+  discount {
+    discountClasses
+    metafield(key: "membership_config") {
+      jsonValue
+    }
+  }
+  shop {
+    metaobject(handle: {type: "$app:membership_config", handle: "default"}) {
+      enabled: field(key: "enabled") {
+        value
+      }
+      memberLabel: field(key: "member_label") {
+        value
+      }
+      savingsLabel: field(key: "savings_label") {
+        value
+      }
+    }
+  }
+}

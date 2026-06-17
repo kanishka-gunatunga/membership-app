@@ -1,0 +1,55 @@
+.member-pricing {
+  margin: 0.75rem 0;
+  padding: 0.875rem 1rem;
+  border: 1px solid #d9d9d9;
+  border-radius: 0.5rem;
+  background: #f7f7f7;
+}
+
+.member-pricing__label {
+  margin: 0 0 0.25rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #5c5c5c;
+}
+
+.member-pricing__price {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1a5c1a;
+}
+
+.member-pricing__compare {
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
+  color: #616161;
+  text-decoration: line-through;
+}
+
+.member-pricing__savings {
+  margin: 0.35rem 0 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1a5c1a;
+}
+
+.member-pricing__prompt {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #303030;
+}
+
+.member-pricing__prompt a {
+  color: inherit;
+  font-weight: 600;
+}
+
+.member-pricing__placeholder {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #616161;
+  line-height: 1.5;
+}
