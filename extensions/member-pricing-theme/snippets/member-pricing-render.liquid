@@ -1,0 +1,111 @@
+{%- liquid
+  comment
+    Shared member pricing display.
+    @param product {Product} required unless line_item is passed
+    @param variant {Variant} optional
+    @param line_item {LineItem} optional — used for cart layouts
+    @param layout {String} pdp | card | cart-line
+    @param member_label {String}
+    @param rrp_label {String}
+    @param membership_label {String}
+    @param login_prompt {String}
+    @param block_id {String} optional — used for PDP variant switching
+    @param shopify_attributes {String} optional
+  endcomment
+
+  if line_item != blank
+    assign mp_product = line_item.product
+    assign mp_variant = line_item.variant
+    assign mp_quantity = line_item.quantity
+  else
+    assign mp_product = product
+    assign mp_variant = variant | default: product.selected_or_first_available_variant
+    assign mp_quantity = 1
+  endif
+
+  assign variant_member_metafield = mp_variant.metafields['$app'].member_price
+  assign product_member_metafield = mp_product.metafields['$app'].member_price
+  assign member_metafield = variant_member_metafield | default: product_member_metafield
+
+  assign rrp_cents = mp_variant.price
+  assign member_cents = 0
+
+  if member_metafield != blank and member_metafield.value != blank
+    if member_metafield.value.amount != blank
+      assign member_cents = member_metafield.value.amount | times: 100 | round
+    else
+      assign member_cents = member_metafield.value | money_without_currency | remove: ',' | times: 100 | round
+    endif
+  endif
+
+  assign has_member_price = false
+  if member_cents > 0 and rrp_cents > member_cents
+    assign has_member_price = true
+  endif
+
+  assign campaign_metafield = mp_product.metafields['$app'].campaign
+  assign campaign_strike = false
+  if campaign_metafield.value == true
+    assign campaign_strike = true
+  endif
+
+  assign savings_cents = rrp_cents | minus: member_cents
+  assign savings_total_cents = savings_cents | times: mp_quantity
+  assign currency_code = cart.currency.iso_code | default: shop.currency
+-%}
+
+{%- if has_member_price or request.design_mode -%}
+  <div
+    class="member-pricing member-pricing--{{ layout }}"
+    {% if block_id != blank %}data-member-pricing-block="{{ block_id }}"{% endif %}
+    {{ shopify_attributes }}
+  >
+    {%- case layout -%}
+      {%- when 'pdp' -%}
+        {%- comment -%} PDP is rendered by blocks/member_pricing.liquid {%- endcomment -%}
+
+      {%- when 'card' -%}
+        <div class="member-pricing__prices member-pricing__prices--stacked" data-member-pricing-prices>
+          <p
+            class="member-pricing__rrp{% if campaign_strike %} member-pricing__rrp--strike{% endif %}"
+            data-member-pricing-rrp
+            data-campaign-strike="{{ campaign_strike }}"
+          >
+            <span class="member-pricing__rrp-label">{{ rrp_label | escape }}</span>
+            <span class="member-pricing__rrp-amount" data-member-pricing-rrp-amount>{{ rrp_cents | money }}</span>
+          </p>
+          <p class="member-pricing__member member-pricing__member--card">
+            <span class="member-pricing__member-label">{{ member_label | escape }}</span>
+            <span class="member-pricing__member-amount" data-member-pricing-member>{{ member_cents | money }}</span>
+            <span class="member-pricing__currency" data-member-pricing-currency>{{ currency_code }}</span>
+          </p>
+        </div>
+
+        {%- if request.design_mode and has_member_price == false -%}
+          <p class="member-pricing__placeholder">
+            {{ 'member_pricing.placeholder' | t }}
+          </p>
+        {%- endif -%}
+
+      {%- when 'cart-line' -%}
+        {%- if customer and has_member_price -%}
+          <div class="member-pricing__cart-membership">
+            <span class="member-pricing__cart-badge" aria-hidden="true">&#9670;</span>
+            <span class="member-pricing__cart-membership-label">
+              {{ membership_label | escape }}(-{{ savings_total_cents | money }})
+            </span>
+          </div>
+          <div class="member-pricing__cart-prices">
+            <span class="member-pricing__cart-member-amount">{{ member_cents | money }}</span>
+            <span class="member-pricing__cart-rrp{% if campaign_strike %} member-pricing__rrp--strike{% endif %}">
+              {{ rrp_cents | money }}
+            </span>
+          </div>
+        {%- elsif request.design_mode -%}
+          <p class="member-pricing__placeholder">
+            {{ 'member_pricing.cart_placeholder' | t }}
+          </p>
+        {%- endif -%}
+    {%- endcase -%}
+  </div>
+{%- endif -%}

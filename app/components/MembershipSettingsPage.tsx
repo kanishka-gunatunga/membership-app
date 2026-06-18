@@ -84,14 +84,15 @@ export default function MembershipSettingsPage() {
               {enabled ? "Pricing enabled" : "Pricing disabled"}
             </span>
           </div>
-          <p className={`${styles.hint} ${styles.hintTop}`}>
+          <p className={`${styles.hint} ${styles.hintTop} ${styles.hintBottom}`}>
             Logged-in customers get member prices at checkout. Set member prices
-            on products and variants using the Member price metafield.
+            on products and variants using the Member price metafield. Enable the
+            Campaign metafield on a product to show RRP with a strikethrough.
           </p>
           {themeEditorUrl ? (
             <s-stack direction="inline" gap="base">
               <s-link href={themeEditorUrl} target="_blank">
-                Add block to product page
+                Add blocks in theme editor
               </s-link>
             </s-stack>
           ) : null}
@@ -151,8 +152,10 @@ export default function MembershipSettingsPage() {
             Variant member price overrides product member price.
           </s-list-item>
           <s-list-item>
-            Open a product page in the theme editor, click Add block, then choose
-            Apps → Member pricing.
+            Product page: Apps → Member pricing. Product cards: open a collection
+            in the theme editor, click a product card, then Apps → Member pricing
+            (card). Or add the member-pricing-card snippet to your theme card
+            template. Cart: Apps → Member pricing (cart).
           </s-list-item>
         </s-unordered-list>
       </s-section>

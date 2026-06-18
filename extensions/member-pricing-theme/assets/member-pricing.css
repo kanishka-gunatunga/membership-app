@@ -1,55 +1,170 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400&display=swap');
+
 .member-pricing {
   margin: 0.75rem 0;
-  padding: 0.875rem 1rem;
-  border: 1px solid #d9d9d9;
-  border-radius: 0.5rem;
-  background: #f7f7f7;
-}
-
-.member-pricing__label {
-  margin: 0 0 0.25rem;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #5c5c5c;
-}
-
-.member-pricing__price {
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #1a5c1a;
-}
-
-.member-pricing__compare {
-  margin: 0.25rem 0 0;
-  font-size: 0.875rem;
-  color: #616161;
-  text-decoration: line-through;
-}
-
-.member-pricing__savings {
-  margin: 0.35rem 0 0;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #1a5c1a;
-}
-
-.member-pricing__prompt {
-  margin: 0;
-  font-size: 0.875rem;
-  color: #303030;
-}
-
-.member-pricing__prompt a {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
   color: inherit;
-  font-weight: 600;
+}
+
+/* ── Product page (PDP) ── */
+
+.member-pricing--pdp .member-pricing__member-label {
+  margin-right: 0.35rem;
+}
+
+.member-pricing--pdp .member-pricing__rrp-label {
+  margin-right: 0.35rem;
+}
+
+.member-pricing--pdp .member-pricing__member {
+  font-family: inherit;
+  font-weight: 500;
+  font-size: 17px;
+  line-height: 1;
+  letter-spacing: 0;
+  color: #313131;
+}
+
+.member-pricing--pdp .member-pricing__member-amount {
+  font-weight: 700;
+}
+
+.member-pricing--pdp .member-pricing__rrp {
+  font-family: inherit;
+  font-weight: 400;
+  font-size: 17px;
+  line-height: 1;
+  letter-spacing: 0;
+  color: #424242;
+}
+
+.member-pricing--pdp .member-pricing__prices {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 1.25rem;
+}
+
+.member-pricing--pdp .member-pricing__rrp--strike .member-pricing__rrp-amount {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.member-pricing--pdp .member-pricing__login-hint {
+  display: block;
+  margin: 1rem 0 0;
+  font-family: 'Plus Jakarta Sans', inherit;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0;
+  color: #666666;
+}
+
+.member-pricing--pdp .member-pricing__login-hint a {
+  color: #b0936c;
+  font-weight: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.member-pricing--pdp .member-pricing__login-hint a:hover {
+  color: #967a52;
+}
+
+.member-pricing--pdp .member-pricing__login-icon {
+  margin-right: 0.25rem;
+}
+
+/* ── Product card ── */
+
+.member-pricing--card .member-pricing__prices--stacked {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+}
+
+.member-pricing--card .member-pricing__rrp {
+  margin: 0;
+  font-family: inherit;
+  font-weight: 400;
+  font-size: 17px;
+  line-height: 1;
+  color: #424242;
+}
+
+.member-pricing--card .member-pricing__rrp--strike .member-pricing__rrp-amount {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.member-pricing--card .member-pricing__member--card {
+  margin: 0;
+  font-family: inherit;
+  font-weight: 500;
+  font-size: 17px;
+  line-height: 1;
+  color: #313131;
+}
+
+.member-pricing--card .member-pricing__member-amount {
+  font-weight: 700;
+}
+
+.member-pricing--card .member-pricing__currency {
+  margin-left: 0.2rem;
+}
+
+/* ── Cart line ── */
+
+.member-pricing__cart-membership {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.35rem 0 0.15rem;
+  font-size: 0.92em;
+}
+
+.member-pricing__cart-badge {
+  font-size: 0.75em;
+  line-height: 1;
+}
+
+.member-pricing__cart-prices {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.member-pricing__cart-member-amount {
+  font-weight: 700;
+}
+
+.member-pricing__cart-rrp {
+  opacity: 0.75;
+}
+
+.member-pricing__cart-rrp.member-pricing__rrp--strike {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
 }
 
 .member-pricing__placeholder {
   margin: 0;
-  font-size: 0.875rem;
-  color: #616161;
-  line-height: 1.5;
+  font-size: 0.9em;
+  opacity: 0.8;
+}
+
+.member-pricing-cart-block__line + .member-pricing-cart-block__line {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+}
+
+.member-pricing-cart-block__title {
+  margin: 0 0 0.25rem;
+  font-weight: 600;
 }

@@ -1,0 +1,57 @@
+{%- comment -%}
+  Cart page helper block — renders member pricing for every cart line.
+  For finer placement, use the member-pricing-cart-line snippet inside your theme line item template.
+{%- endcomment -%}
+
+<div class="member-pricing-cart-block" {{ block.shopify_attributes }}>
+  {%- if cart.item_count > 0 -%}
+    {%- for item in cart.items -%}
+      <div class="member-pricing-cart-block__line" data-line-key="{{ item.key }}">
+        <p class="member-pricing-cart-block__title">{{ item.product.title | escape }}</p>
+        {%- render 'member-pricing-cart-line',
+          line_item: item,
+          member_label: block.settings.member_label,
+          rrp_label: block.settings.rrp_label,
+          membership_label: block.settings.membership_label
+        -%}
+      </div>
+    {%- endfor -%}
+  {%- elsif request.design_mode -%}
+    <p class="member-pricing__placeholder">{{ 'member_pricing.cart_block_placeholder' | t }}</p>
+  {%- endif -%}
+</div>
+
+{% schema %}
+{
+  "name": "Member pricing (cart)",
+  "target": "section",
+  "enabled_on": {
+    "templates": ["cart"]
+  },
+  "stylesheet": "member-pricing.css",
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "For cart drawer and per-line placement, add the member-pricing-cart-line snippet to your theme's cart line item template."
+    },
+    {
+      "type": "text",
+      "id": "member_label",
+      "label": "Member price label",
+      "default": "Members"
+    },
+    {
+      "type": "text",
+      "id": "rrp_label",
+      "label": "RRP label",
+      "default": "RRP"
+    },
+    {
+      "type": "text",
+      "id": "membership_label",
+      "label": "Membership label",
+      "default": "My membership"
+    }
+  ]
+}
+{% endschema %}

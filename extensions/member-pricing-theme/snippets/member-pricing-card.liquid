@@ -1,0 +1,20 @@
+{%- comment -%}
+  Drop-in member pricing for theme product card snippets (e.g. card-product.liquid):
+  {% render 'member-pricing-card', product: card_product %}
+{%- endcomment -%}
+
+{%- liquid
+  assign mp_member_label = member_label | default: 'Members'
+  assign mp_rrp_label = rrp_label | default: 'RRP'
+  assign mp_membership_label = membership_label | default: 'My membership'
+  assign mp_login_prompt = login_prompt | default: ''
+-%}
+
+{%- render 'member-pricing-render',
+  product: product,
+  layout: 'card',
+  member_label: mp_member_label,
+  rrp_label: mp_rrp_label,
+  membership_label: mp_membership_label,
+  login_prompt: mp_login_prompt
+-%}

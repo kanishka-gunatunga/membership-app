@@ -1,5 +1,20 @@
 {
   "member_pricing": {
-    "name": "Member pricing"
+    "name": "Member pricing",
+    "pdp_member_label": "Member",
+    "pdp_rrp_label": "RRP",
+    "login_prefix": "To get this product at member price, please ",
+    "login_link": "login",
+    "login_suffix": " to your account first.",
+    "placeholder": "Member pricing appears here when a product or variant has a Member price metafield lower than the regular price.",
+    "card_placeholder": "Add this block inside a product card section to preview member pricing.",
+    "cart_placeholder": "Membership savings appear here for logged-in customers with member-priced items.",
+    "cart_block_placeholder": "Add items to the cart to preview membership pricing."
+  },
+  "member_pricing_card": {
+    "name": "Member pricing (card)"
+  },
+  "member_pricing_cart": {
+    "name": "Member pricing (cart)"
   }
 }

@@ -2,6 +2,8 @@ export const MEMBER_LEVEL_PHASE1 = 1;
 
 export const MEMBER_PRICE_METAFIELD_KEY = "member_price";
 
+export const CAMPAIGN_METAFIELD_KEY = "campaign";
+
 export const MEMBERSHIP_CONFIG_METAOBJECT_TYPE = "$app:membership_config";
 
 export const MEMBERSHIP_DISCOUNT_METAFIELD_KEY = "membership_config";

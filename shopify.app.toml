@@ -23,6 +23,13 @@ description = "Overrides product member price for this variant."
 access.admin = "merchant_read_write"
 access.storefront = "public_read"
 
+[product.metafields.app.campaign]
+type = "boolean"
+name = "Campaign"
+description = "When enabled, RRP is shown with a strikethrough."
+access.admin = "merchant_read_write"
+access.storefront = "public_read"
+
 [metaobjects.app.membership_config]
 name = "Membership Config"
 description = "Global membership pricing settings for the shop"

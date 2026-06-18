@@ -43,6 +43,10 @@
   margin-top: 1rem;
 }
 
+.hintBottom {
+  margin-bottom: 0.75rem;
+}
+
 .fieldStack {
   display: flex;
   flex-direction: column;
