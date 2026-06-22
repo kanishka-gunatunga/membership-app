@@ -49,17 +49,16 @@
     {{ block.shopify_attributes }}
   >
     <div class="member-pricing__prices" data-member-pricing-prices>
+      <span class="member-pricing__member">
+        <span class="member-pricing__member-label">Member</span>
+        <span class="member-pricing__member-amount" data-member-pricing-member>{{ member_cents | money }}</span>
+      </span>
       <span
         class="member-pricing__rrp{% if campaign_strike %} member-pricing__rrp--strike{% endif %}"
         data-member-pricing-rrp
         data-campaign-strike="{{ campaign_strike }}"
       >
-        <span class="member-pricing__rrp-label">RRP</span>
-        <span class="member-pricing__rrp-amount" data-member-pricing-rrp-amount>{{ rrp_cents | money }}</span>
-      </span>
-      <span class="member-pricing__member">
-        <span class="member-pricing__member-label">Member</span>
-        <span class="member-pricing__member-amount" data-member-pricing-member>{{ member_cents | money }}</span>
+        <span class="member-pricing__rrp-label">RRP</span> <span class="member-pricing__rrp-amount" data-member-pricing-rrp-amount>{{ rrp_cents | money }}</span>
       </span>
     </div>
 

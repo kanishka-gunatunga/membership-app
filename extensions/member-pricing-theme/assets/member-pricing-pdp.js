@@ -42,6 +42,11 @@
 
   function memberPricesHtml(variant, moneyFormat) {
     return (
+      '<span class="member-pricing__member">' +
+      '<span class="member-pricing__member-label">Member</span> ' +
+      '<span class="member-pricing__member-amount" data-member-pricing-member>' +
+      formatMoney(variant.memberCents, moneyFormat) +
+      '</span></span>' +
       '<span class="member-pricing__rrp' +
       (variant.campaignStrike ? ' member-pricing__rrp--strike' : '') +
       '" data-member-pricing-rrp data-campaign-strike="' +
@@ -50,11 +55,6 @@
       '<span class="member-pricing__rrp-label">RRP</span> ' +
       '<span class="member-pricing__rrp-amount" data-member-pricing-rrp-amount>' +
       formatMoney(variant.rrpCents, moneyFormat) +
-      '</span></span>' +
-      '<span class="member-pricing__member">' +
-      '<span class="member-pricing__member-label">Member</span> ' +
-      '<span class="member-pricing__member-amount" data-member-pricing-member>' +
-      formatMoney(variant.memberCents, moneyFormat) +
       '</span></span>'
     );
   }
