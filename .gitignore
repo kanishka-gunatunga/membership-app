@@ -67,6 +67,9 @@ coverage/
 .mcp.json
 .claude/
 
+# Local theme inspection (never commit)
+.theme-inspect/
+
 # OS files
 .DS_Store
 .DS_Store?

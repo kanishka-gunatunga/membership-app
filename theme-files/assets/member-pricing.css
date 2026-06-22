@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400&display=swap");
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400&display=swap');
 
 .member-pricing {
   margin: 0.75rem 0;
@@ -47,22 +47,6 @@
   gap: 0.35rem 1.25rem;
 }
 
-.member-pricing--pdp-fallback {
-  margin: 0;
-}
-
-.member-pricing__regular-only {
-  margin: 0;
-  font-family: inherit;
-  font-size: inherit;
-  line-height: inherit;
-  color: inherit;
-}
-
-.member-pricing__regular-amount {
-  font-weight: inherit;
-}
-
 .member-pricing--pdp .member-pricing__rrp--strike .member-pricing__rrp-amount {
   text-decoration: line-through;
   text-decoration-thickness: 1px;
@@ -71,7 +55,7 @@
 .member-pricing--pdp .member-pricing__login-hint {
   display: block;
   margin: 1rem 0 0;
-  font-family: "Plus Jakarta Sans", inherit;
+  font-family: 'Plus Jakarta Sans', inherit;
   font-weight: 400;
   font-size: 14px;
   line-height: 20px;
@@ -96,33 +80,20 @@
 
 /* ── Product card ── */
 
-.member-pricing--card {
-  margin: 0;
-  font-family: inherit;
-}
-
 .member-pricing--card .member-pricing__prices--stacked {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0;
-  padding: 0.35rem 0;
+  gap: 0.2rem;
 }
 
 .member-pricing--card .member-pricing__rrp {
   margin: 0;
-  padding: 0.2rem 0;
   font-family: inherit;
   font-weight: 400;
-  font-size: 12px;
+  font-size: 17px;
   line-height: 1;
-  letter-spacing: 0;
   color: #424242;
-}
-
-.member-pricing--card .member-pricing__rrp-label,
-.member-pricing--card .member-pricing__rrp-amount {
-  font-weight: 400;
 }
 
 .member-pricing--card .member-pricing__rrp--strike .member-pricing__rrp-amount {
@@ -132,45 +103,15 @@
 
 .member-pricing--card .member-pricing__member--card {
   margin: 0;
-  padding: 0.2rem 0;
   font-family: inherit;
-  font-size: 12px;
+  font-weight: 500;
+  font-size: 17px;
   line-height: 1;
-  letter-spacing: 0;
-  color: #000000;
-}
-
-.member-pricing--card .member-pricing__member-label {
-  font-weight: 400;
+  color: #313131;
 }
 
 .member-pricing--card .member-pricing__member-amount {
-  font-weight: 600;
-}
-
-/* Beat theme resets that force inherited/normal weight on nested spans */
-.member-pricing.member-pricing--card
-  .member-pricing__member--card
-  > .member-pricing__member-amount {
-  font-weight: 600 !important;
-}
-
-.member-pricing--card .member-pricing__regular-only {
-  margin: 0;
-  padding: 0.35rem 0;
-  font-family: inherit;
-  font-size: 12px;
-  line-height: 1;
-  letter-spacing: 0;
-  color: #000000;
-}
-
-.member-pricing--card .member-pricing__regular-amount {
   font-weight: 700;
-}
-
-.member-pricing.member-pricing--card .member-pricing__regular-amount {
-  font-weight: 700 !important;
 }
 
 .member-pricing--card .member-pricing__currency {

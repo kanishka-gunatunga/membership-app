@@ -1,25 +1,27 @@
-{%- comment -%}
-  Product card member pricing. Add this block to collection / featured product sections.
-  Uses closest.product when rendered inside a product card context.
-{%- endcomment -%}
-
 {%- liquid
-  assign card_product = product | default: closest.product
+  assign card_product = block.settings.product | default: product | default: closest.product
 -%}
 
 {%- if card_product != blank -%}
-  {%- render 'member-pricing-render',
-    product: card_product,
-    layout: 'card',
-    member_label: block.settings.member_label,
-    rrp_label: block.settings.rrp_label,
-    membership_label: block.settings.membership_label,
-    login_prompt: block.settings.login_prompt,
-    shopify_attributes: block.shopify_attributes
-  -%}
+  {%- assign current_variant = card_product.selected_or_first_available_variant -%}
+  <div
+    class="member-pricing member-pricing--card"
+    data-member-pricing-card
+    data-product-handle="{{ card_product.handle }}"
+    data-rrp-cents="{{ current_variant.price }}"
+    {{ block.shopify_attributes }}
+  >
+    <div data-member-pricing-content>
+      <p class="member-pricing__regular-only">
+        <span class="member-pricing__regular-amount">{{ current_variant.price | money }}</span>
+      </p>
+    </div>
+  </div>
 {%- elsif request.design_mode -%}
   <div class="member-pricing member-pricing--card" {{ block.shopify_attributes }}>
-    <p class="member-pricing__placeholder">{{ 'member_pricing.card_placeholder' | t }}</p>
+    <p class="member-pricing__placeholder">
+      Click a product card in the preview, then add this block inside that card.
+    </p>
   </div>
 {%- endif -%}
 
@@ -33,32 +35,10 @@
   "stylesheet": "member-pricing.css",
   "settings": [
     {
-      "type": "paragraph",
-      "content": "Click a product card in the preview (not the section header), then add this block inside that card. It cannot auto-inject into every card without this step."
-    },
-    {
-      "type": "text",
-      "id": "member_label",
-      "label": "Member price label",
-      "default": "Members"
-    },
-    {
-      "type": "text",
-      "id": "rrp_label",
-      "label": "RRP label",
-      "default": "RRP"
-    },
-    {
-      "type": "text",
-      "id": "membership_label",
-      "label": "Membership label",
-      "default": "My membership"
-    },
-    {
-      "type": "text",
-      "id": "login_prompt",
-      "label": "Login prompt",
-      "default": "To get this product at member price, please"
+      "type": "product",
+      "id": "product",
+      "label": "Product",
+      "autofill": true
     }
   ]
 }

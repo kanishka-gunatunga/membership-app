@@ -12,20 +12,72 @@ import {
   syncMembershipDiscount,
 } from "../lib/membership-discount.server";
 import { DEFAULT_MEMBERSHIP_CONFIG } from "../lib/membership.shared";
+import { getThemeCardSetupGuide, getCardSnippetSource } from "../lib/theme-card-install.server";
+import { getMemberPriceCatalogStatus } from "../lib/membership-products.server";
+import {
+  getThemeAppEmbedUrl,
+  getThemeCollectionCardBlockUrl,
+  getThemeProductBlockUrl,
+  getProductsAdminUrl,
+  getAppProxyPricingTestUrl,
+  getThemesAdminUrl,
+  loadMainTheme,
+} from "../lib/theme-admin-urls.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
-  const [config, discountActive] = await Promise.all([
+  const [config, discountActive, cardSetup, mainTheme, catalogStatus] =
+    await Promise.all([
     loadMembershipConfigFromDiscount(admin),
     isMembershipDiscountActive(admin),
+    session.shop
+      ? getThemeCardSetupGuide(admin, session.shop)
+      : Promise.resolve(null),
+    loadMainTheme(admin),
+    getMemberPriceCatalogStatus(admin),
   ]);
 
   const apiKey = process.env.SHOPIFY_API_KEY || "";
-  const themeEditorUrl = session.shop
-    ? `https://${session.shop}/admin/themes/current/editor?template=product&addAppBlockId=${apiKey}/member_pricing&target=mainSection`
-    : null;
+  const shop = session.shop;
 
-  return { config, discountActive, themeEditorUrl };
+  const themeEditorUrl =
+    shop && mainTheme?.id
+      ? getThemeProductBlockUrl(shop, mainTheme.id, apiKey, "member_pricing")
+      : null;
+  const cardBlockEditorUrl =
+    shop && mainTheme?.id
+      ? getThemeCollectionCardBlockUrl(
+          shop,
+          mainTheme.id,
+          apiKey,
+          "member_pricing_card",
+        )
+      : null;
+  const cardStylesEmbedUrl =
+    shop && mainTheme?.id
+      ? getThemeAppEmbedUrl(shop, mainTheme.id, apiKey, "member_pricing_styles")
+      : null;
+  const themesAdminUrl = shop ? getThemesAdminUrl(shop) : null;
+  const productsAdminUrl = shop ? getProductsAdminUrl(shop) : null;
+  const cardSnippetSource = getCardSnippetSource();
+  const appProxyTestUrl =
+    shop && catalogStatus.sampleProductHandle
+      ? getAppProxyPricingTestUrl(shop, catalogStatus.sampleProductHandle)
+      : null;
+
+  return {
+    config,
+    discountActive,
+    themeEditorUrl,
+    cardBlockEditorUrl,
+    cardStylesEmbedUrl,
+    themesAdminUrl,
+    productsAdminUrl,
+    cardSetup,
+    catalogStatus,
+    cardSnippetSource,
+    appProxyTestUrl,
+  };
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {

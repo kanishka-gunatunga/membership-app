@@ -6,7 +6,7 @@ application_url = "https://example.com"
 embedded = true
 
 [access_scopes]
-scopes = "read_metaobjects,write_metaobjects,write_metaobject_definitions,write_discounts,read_products,write_products"
+scopes = "read_metaobjects,write_metaobjects,write_metaobject_definitions,write_discounts,read_products,write_products,read_themes"
 use_legacy_install_flow = false
 
 [product.metafields.app.member_price]

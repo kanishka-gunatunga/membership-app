@@ -19,14 +19,72 @@
     );
     if (!script) return null;
     try {
-      var parsed = JSON.parse(script.textContent);
-      if (Array.isArray(parsed)) {
-        return { moneyFormat: null, variants: parsed };
-      }
-      return parsed;
+      return JSON.parse(script.textContent);
     } catch (error) {
       return null;
     }
+  }
+
+  function loginHintHtml() {
+    var returnUrl = encodeURIComponent(
+      window.location.pathname + window.location.search,
+    );
+    return (
+      '<p class="member-pricing__login-hint" data-member-pricing-login-hint>' +
+      '<span class="member-pricing__login-icon" aria-hidden="true">&#128161;</span> ' +
+      'To get this product at member price, please ' +
+      '<a href="/account/login?return_url=' +
+      returnUrl +
+      '">login</a> to your account first.' +
+      '</p>'
+    );
+  }
+
+  function memberPricesHtml(variant, moneyFormat) {
+    return (
+      '<span class="member-pricing__rrp' +
+      (variant.campaignStrike ? ' member-pricing__rrp--strike' : '') +
+      '" data-member-pricing-rrp data-campaign-strike="' +
+      Boolean(variant.campaignStrike) +
+      '">' +
+      '<span class="member-pricing__rrp-label">RRP</span> ' +
+      '<span class="member-pricing__rrp-amount" data-member-pricing-rrp-amount>' +
+      formatMoney(variant.rrpCents, moneyFormat) +
+      '</span></span>' +
+      '<span class="member-pricing__member">' +
+      '<span class="member-pricing__member-label">Member</span> ' +
+      '<span class="member-pricing__member-amount" data-member-pricing-member>' +
+      formatMoney(variant.memberCents, moneyFormat) +
+      '</span></span>'
+    );
+  }
+
+  function renderMemberPricing(block, variant, moneyFormat) {
+    var pricesEl = block.querySelector('[data-member-pricing-prices]');
+
+    if (pricesEl) {
+      pricesEl.innerHTML = memberPricesHtml(variant, moneyFormat);
+      if (!block.querySelector('[data-member-pricing-login-hint]')) {
+        block.insertAdjacentHTML('beforeend', loginHintHtml());
+      }
+      return;
+    }
+
+    block.className = 'member-pricing member-pricing--pdp';
+    block.innerHTML =
+      '<div class="member-pricing__prices" data-member-pricing-prices">' +
+      memberPricesHtml(variant, moneyFormat) +
+      '</div>' +
+      loginHintHtml();
+  }
+
+  function renderRegularPrice(block, rrpCents, moneyFormat) {
+    block.className = 'member-pricing member-pricing--pdp member-pricing--pdp-fallback';
+    block.innerHTML =
+      '<p class="member-pricing__regular-only">' +
+      '<span class="member-pricing__regular-amount">' +
+      formatMoney(rrpCents, moneyFormat) +
+      '</span></p>';
   }
 
   function updateBlock(block, variantId) {
@@ -38,19 +96,13 @@
     });
     if (!variant) return;
 
-    var memberEl = block.querySelector('[data-member-pricing-member]');
-    var rrpAmountEl = block.querySelector('[data-member-pricing-rrp-amount]');
-    var rrpEl = block.querySelector('[data-member-pricing-rrp]');
+    var hasMemberPrice =
+      variant.memberCents > 0 && variant.rrpCents > variant.memberCents;
 
-    if (memberEl) {
-      memberEl.textContent = formatMoney(variant.memberCents, data.moneyFormat);
-    }
-    if (rrpAmountEl) {
-      rrpAmountEl.textContent = formatMoney(variant.rrpCents, data.moneyFormat);
-    }
-    if (rrpEl) {
-      rrpEl.classList.toggle('member-pricing__rrp--strike', Boolean(variant.campaignStrike));
-      rrpEl.setAttribute('data-campaign-strike', String(Boolean(variant.campaignStrike)));
+    if (hasMemberPrice) {
+      renderMemberPricing(block, variant, data.moneyFormat);
+    } else {
+      renderRegularPrice(block, variant.rrpCents, data.moneyFormat);
     }
   }
 

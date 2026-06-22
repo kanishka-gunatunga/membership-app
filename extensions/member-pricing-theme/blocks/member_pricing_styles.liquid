@@ -1,0 +1,19 @@
+{%- comment -%}
+  Loads CSS + JS that hydrates product card member prices via the app proxy.
+  Enable under Theme settings → App embeds → Card pricing styles.
+{%- endcomment -%}
+
+{% schema %}
+{
+  "name": "Card pricing styles",
+  "target": "body",
+  "stylesheet": "member-pricing.css",
+  "javascript": "member-pricing-cards.js",
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "Required for product card member pricing. Enable on all pages, then hard-refresh collection pages."
+    }
+  ]
+}
+{% endschema %}
