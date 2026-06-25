@@ -21,9 +21,9 @@ export default function App() {
   return (
     <div className={styles.index}>
       <div className={styles.content}>
-        <h1 className={styles.heading}>A short heading about [your app]</h1>
+        <h1 className={styles.heading}>MemberPro</h1>
         <p className={styles.text}>
-          A tagline about [your app] that describes your value proposition.
+          Build, Manage, and Grow Memberships
         </p>
         {showForm && (
           <Form className={styles.form} method="post" action="/auth/login">

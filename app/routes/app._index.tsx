@@ -17,19 +17,28 @@ import { getMemberPriceCatalogStatus } from "../lib/membership-products.server";
 import {
   getThemeAppEmbedUrl,
   getThemeCollectionCardBlockUrl,
+  getThemeCartBlockUrl,
   getThemeProductBlockUrl,
   getProductsAdminUrl,
-  getAppProxyPricingTestUrl,
   getThemesAdminUrl,
   loadMainTheme,
 } from "../lib/theme-admin-urls.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
-  const [config, discountActive, cardSetup, mainTheme, catalogStatus] =
-    await Promise.all([
+
+  let discountActive = await isMembershipDiscountActive(admin);
+  if (!discountActive) {
+    try {
+      await syncMembershipDiscount(admin, DEFAULT_MEMBERSHIP_CONFIG);
+      discountActive = true;
+    } catch {
+      // Function extension may not be deployed yet.
+    }
+  }
+
+  const [config, cardSetup, mainTheme, catalogStatus] = await Promise.all([
     loadMembershipConfigFromDiscount(admin),
-    isMembershipDiscountActive(admin),
     session.shop
       ? getThemeCardSetupGuide(admin, session.shop)
       : Promise.resolve(null),
@@ -53,6 +62,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           "member_pricing_card",
         )
       : null;
+  const cartBlockEditorUrl =
+    shop && mainTheme?.id
+      ? getThemeCartBlockUrl(shop, mainTheme.id, apiKey, "member_pricing_cart")
+      : null;
   const cardStylesEmbedUrl =
     shop && mainTheme?.id
       ? getThemeAppEmbedUrl(shop, mainTheme.id, apiKey, "member_pricing_styles")
@@ -60,23 +73,19 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const themesAdminUrl = shop ? getThemesAdminUrl(shop) : null;
   const productsAdminUrl = shop ? getProductsAdminUrl(shop) : null;
   const cardSnippetSource = getCardSnippetSource();
-  const appProxyTestUrl =
-    shop && catalogStatus.sampleProductHandle
-      ? getAppProxyPricingTestUrl(shop, catalogStatus.sampleProductHandle)
-      : null;
 
   return {
     config,
     discountActive,
     themeEditorUrl,
     cardBlockEditorUrl,
+    cartBlockEditorUrl,
     cardStylesEmbedUrl,
     themesAdminUrl,
     productsAdminUrl,
     cardSetup,
     catalogStatus,
     cardSnippetSource,
-    appProxyTestUrl,
   };
 };
 

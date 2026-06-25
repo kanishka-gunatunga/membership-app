@@ -1,5 +1,10 @@
 {%- liquid
   assign block_id = block.id | default: section.id
+  assign mp_member_label = 'Member price'
+  assign mp_config = shop.metaobjects.membership_config.default
+  if mp_config != blank and mp_config.member_label.value != blank
+    assign mp_member_label = mp_config.member_label.value
+  endif
   assign current_variant = product.selected_or_first_available_variant
   assign rrp_cents = current_variant.price
   assign member_cents = 0
@@ -50,7 +55,7 @@
   >
     <div class="member-pricing__prices" data-member-pricing-prices>
       <span class="member-pricing__member">
-        <span class="member-pricing__member-label">Member</span>
+        <span class="member-pricing__member-label">{{ mp_member_label | escape }}</span>
         <span class="member-pricing__member-amount" data-member-pricing-member>{{ member_cents | money }}</span>
       </span>
       <span
@@ -117,7 +122,7 @@
 
 {% schema %}
 {
-  "name": "Member pricing",
+  "name": "MemberPro pricing",
   "target": "section",
   "enabled_on": {
     "templates": ["product"]

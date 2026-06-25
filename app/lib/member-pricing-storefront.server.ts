@@ -1,3 +1,5 @@
+import { parseCampaignStrike } from "./membership.shared";
+
 type AdminClient = {
   graphql: (
     query: string,
@@ -71,15 +73,6 @@ function parseMoneyMetafieldToCents(value: unknown): number {
 
 function buildHandleQuery(handles: string[]): string {
   return handles.map((handle) => `handle:${handle}`).join(" OR ");
-}
-
-function parseCampaignStrike(
-  metafield: { jsonValue?: unknown; value?: string | null } | null | undefined,
-): boolean {
-  if (!metafield) return false;
-  if (metafield.jsonValue === true || metafield.jsonValue === "true") return true;
-  if (metafield.value === "true") return true;
-  return false;
 }
 
 export async function getStorefrontPricingByHandles(

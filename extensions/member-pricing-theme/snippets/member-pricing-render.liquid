@@ -66,17 +66,17 @@
 
       {%- when 'card' -%}
         <div class="member-pricing__prices member-pricing__prices--stacked" data-member-pricing-prices>
+          <p class="member-pricing__member member-pricing__member--card">
+            <span class="member-pricing__member-label">{{ member_label | escape }}</span>
+            <span class="member-pricing__member-amount" data-member-pricing-member>{{ member_cents | money }}</span>
+            <span class="member-pricing__currency" data-member-pricing-currency>{{ currency_code }}</span>
+          </p>
           <p
             class="member-pricing__rrp{% if campaign_strike %} member-pricing__rrp--strike{% endif %}"
             data-member-pricing-rrp
             data-campaign-strike="{{ campaign_strike }}"
           >
             <span class="member-pricing__rrp-label">{{ rrp_label | escape }}</span> <span class="member-pricing__rrp-amount" data-member-pricing-rrp-amount>{{ rrp_cents | money }}</span>
-          </p>
-          <p class="member-pricing__member member-pricing__member--card">
-            <span class="member-pricing__member-label">{{ member_label | escape }}</span>
-            <span class="member-pricing__member-amount" data-member-pricing-member>{{ member_cents | money }}</span>
-            <span class="member-pricing__currency" data-member-pricing-currency>{{ currency_code }}</span>
           </p>
         </div>
 

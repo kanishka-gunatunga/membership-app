@@ -1,6 +1,7 @@
 import type { LoaderFunctionArgs } from "react-router";
 
 import { getStorefrontPricingByHandles } from "../lib/member-pricing-storefront.server";
+import { loadMembershipConfigFromDiscount } from "../lib/membership-discount.server";
 import { authenticate, unauthenticated } from "../shopify.server";
 
 /** App proxy handler — Shopify forwards /apps/membership-pricing/prices to /prices on the app. */
@@ -26,10 +27,19 @@ export async function memberPricingPricesLoader({ request }: LoaderFunctionArgs)
       .map((handle) => handle.trim())
       .filter(Boolean) ?? [];
 
-  const products = await getStorefrontPricingByHandles(admin, handles);
+  const [products, config] = await Promise.all([
+    getStorefrontPricingByHandles(admin, handles),
+    loadMembershipConfigFromDiscount(admin),
+  ]);
 
   return Response.json(
-    { products },
+    {
+      products,
+      labels: {
+        memberLabel: config.memberLabel,
+        rrpLabel: "RRP",
+      },
+    },
     {
       headers: {
         "Cache-Control": "public, max-age=60",

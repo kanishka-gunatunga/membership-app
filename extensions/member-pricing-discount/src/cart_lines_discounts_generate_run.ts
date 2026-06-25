@@ -26,15 +26,42 @@ function centsToDecimalAmount(cents: number): string {
   return (cents / 100).toFixed(2);
 }
 
-function parseMoneyValue(raw: unknown): MoneyValue | null {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
-  const value = raw as Record<string, unknown>;
-  if (typeof value.amount !== 'string') return null;
-  return {
-    amount: value.amount,
-    currencyCode:
-      typeof value.currencyCode === 'string' ? value.currencyCode : undefined,
-  };
+const DEFAULT_FUNCTION_CONFIG: FunctionConfig = {
+  enabled: true,
+  memberLabel: 'Member price',
+  savingsLabel: 'You save',
+};
+
+function parseMoneyMetafield(
+  jsonValue: unknown,
+  valueString?: string | null,
+): MoneyValue | null {
+  if (jsonValue && typeof jsonValue === 'object' && !Array.isArray(jsonValue)) {
+    const record = jsonValue as Record<string, unknown>;
+    if (typeof record.amount === 'string' && record.amount.trim()) {
+      return {
+        amount: record.amount,
+        currencyCode:
+          typeof record.currencyCode === 'string'
+            ? record.currencyCode
+            : undefined,
+      };
+    }
+    if (typeof record.amount === 'number' && Number.isFinite(record.amount)) {
+      return {amount: record.amount.toFixed(2)};
+    }
+  }
+
+  if (typeof valueString === 'string' && valueString.trim()) {
+    try {
+      return parseMoneyMetafield(JSON.parse(valueString));
+    } catch {
+      const cleaned = valueString.replace(/[^0-9.-]/g, '');
+      if (cleaned) return {amount: cleaned};
+    }
+  }
+
+  return null;
 }
 
 function resolveMemberPriceCents(
@@ -82,15 +109,16 @@ function parseDiscountMetafieldConfig(input: CartInput): FunctionConfig | null {
   return parseRecordConfig(jsonValue as Record<string, unknown>);
 }
 
-function parseFunctionConfig(input: CartInput): FunctionConfig | null {
-  return parseMetaobjectConfig(input) ?? parseDiscountMetafieldConfig(input);
+function parseFunctionConfig(input: CartInput): FunctionConfig {
+  return (
+    parseMetaobjectConfig(input) ??
+    parseDiscountMetafieldConfig(input) ??
+    DEFAULT_FUNCTION_CONFIG
+  );
 }
 
 function isLevelOneMember(input: CartInput): boolean {
-  return (
-    input.cart.buyerIdentity?.isAuthenticated === true &&
-    Boolean(input.cart.buyerIdentity?.customer?.id)
-  );
+  return input.cart.buyerIdentity?.isAuthenticated === true;
 }
 
 export function cartLinesDiscountsGenerateRun(
@@ -109,7 +137,7 @@ export function cartLinesDiscountsGenerateRun(
   }
 
   const functionConfig = parseFunctionConfig(input);
-  if (!functionConfig?.enabled) {
+  if (!functionConfig.enabled) {
     return {operations: []};
   }
 
@@ -126,11 +154,13 @@ export function cartLinesDiscountsGenerateRun(
   for (const line of input.cart.lines) {
     if (line.merchandise.__typename !== 'ProductVariant') continue;
 
-    const variantMemberPrice = parseMoneyValue(
+    const variantMemberPrice = parseMoneyMetafield(
       line.merchandise.memberPrice?.jsonValue,
+      line.merchandise.memberPrice?.value,
     );
-    const productMemberPrice = parseMoneyValue(
+    const productMemberPrice = parseMoneyMetafield(
       line.merchandise.product?.memberPrice?.jsonValue,
+      line.merchandise.product?.memberPrice?.value,
     );
     const memberPriceCents = resolveMemberPriceCents(
       variantMemberPrice,
@@ -151,7 +181,7 @@ export function cartLinesDiscountsGenerateRun(
     const discountAmount = centsToDecimalAmount(totalDiscountCents);
 
     candidates.push({
-      message: `${functionConfig.savingsLabel} $${discountAmount}`,
+      message: `${functionConfig.savingsLabel} ${centsToDecimalAmount(totalDiscountCents)}`,
       targets: [{cartLine: {id: line.id}}],
       value: {
         fixedAmount: {
@@ -170,7 +200,7 @@ export function cartLinesDiscountsGenerateRun(
       {
         productDiscountsAdd: {
           candidates,
-          selectionStrategy: ProductDiscountSelectionStrategy.First,
+          selectionStrategy: ProductDiscountSelectionStrategy.All,
         },
       },
     ],

@@ -1,10 +1,13 @@
 import type { authenticate } from "../shopify.server";
 import {
   DEFAULT_MEMBERSHIP_CONFIG,
+  LEGACY_MEMBERSHIP_DISCOUNT_TITLE,
   MEMBERSHIP_DISCOUNT_METAFIELD_KEY,
   MEMBERSHIP_DISCOUNT_TITLE,
+  MEMBERSHIP_DISCOUNT_TITLES,
   type MembershipConfig,
 } from "./membership.shared";
+import { saveMembershipConfig } from "./membership-config.server";
 
 type AdminGraphQLClient = Awaited<
   ReturnType<typeof authenticate.admin>
@@ -17,7 +20,7 @@ const LIST_APP_DISCOUNTS_QUERY = `#graphql
     discountNodes(first: 25, query: "type:app") {
       nodes {
         id
-        metafield(key: "${MEMBERSHIP_DISCOUNT_METAFIELD_KEY}") {
+        metafield(namespace: "$app", key: "${MEMBERSHIP_DISCOUNT_METAFIELD_KEY}") {
           jsonValue
         }
         discount {
@@ -27,6 +30,24 @@ const LIST_APP_DISCOUNTS_QUERY = `#graphql
             status
           }
         }
+      }
+    }
+  }
+`;
+
+const ACTIVATE_DISCOUNT_MUTATION = `#graphql
+  mutation ActivateMemberPricingDiscount($id: ID!) {
+    discountAutomaticActivate(id: $id) {
+      automaticDiscountNode {
+        automaticDiscount {
+          ... on DiscountAutomaticApp {
+            status
+          }
+        }
+      }
+      userErrors {
+        field
+        message
       }
     }
   }
@@ -93,9 +114,16 @@ function metafieldInput(config: MembershipConfig) {
   };
 }
 
-async function findAutomaticDiscountId(
+type MembershipDiscountNode = {
+  nodeId: string;
+  discountId: string;
+  title: string;
+  status: string;
+};
+
+async function findMembershipDiscountNode(
   admin: AdminGraphQLClient,
-): Promise<string | null> {
+): Promise<MembershipDiscountNode | null> {
   const response = await admin.graphql(LIST_APP_DISCOUNTS_QUERY);
   const payload = (await response.json()) as GraphqlPayload;
   assertGraphqlOk(payload, "List discounts");
@@ -106,14 +134,55 @@ async function findAutomaticDiscountId(
 
   for (const node of nodes) {
     const discount = node.discount as
-      | { discountId?: string; title?: string }
+      | { discountId?: string; title?: string; status?: string }
       | undefined;
-    if (discount?.title === MEMBERSHIP_DISCOUNT_TITLE && discount.discountId) {
-      return discount.discountId;
+    if (
+      discount?.title &&
+      MEMBERSHIP_DISCOUNT_TITLES.includes(
+        discount.title as (typeof MEMBERSHIP_DISCOUNT_TITLES)[number],
+      ) &&
+      discount.discountId &&
+      typeof node.id === "string"
+    ) {
+      return {
+        nodeId: node.id,
+        discountId: discount.discountId,
+        title: discount.title,
+        status: discount.status ?? "UNKNOWN",
+      };
     }
   }
 
   return null;
+}
+
+async function activateAutomaticDiscount(
+  admin: AdminGraphQLClient,
+  nodeId: string,
+): Promise<void> {
+  const response = await admin.graphql(ACTIVATE_DISCOUNT_MUTATION, {
+    variables: { id: nodeId },
+  });
+  const payload = (await response.json()) as GraphqlPayload;
+  assertGraphqlOk(payload, "Activate discount");
+
+  const userErrors =
+    (
+      payload.data?.discountAutomaticActivate as {
+        userErrors?: Array<{ message: string }>;
+      }
+    )?.userErrors ?? [];
+
+  if (userErrors.length > 0) {
+    throw new Error(userErrors.map((error) => error.message).join("; "));
+  }
+}
+
+async function findAutomaticDiscountId(
+  admin: AdminGraphQLClient,
+): Promise<string | null> {
+  const node = await findMembershipDiscountNode(admin);
+  return node?.discountId ?? null;
 }
 
 async function createAutomaticDiscount(
@@ -191,20 +260,36 @@ async function setDiscountMetafield(
 export async function isMembershipDiscountActive(
   admin: AdminGraphQLClient,
 ): Promise<boolean> {
-  const discountId = await findAutomaticDiscountId(admin);
-  return Boolean(discountId);
+  const node = await findMembershipDiscountNode(admin);
+  return node?.status === "ACTIVE";
 }
 
 export async function syncMembershipDiscount(
   admin: AdminGraphQLClient,
   config: MembershipConfig,
 ): Promise<{ discountId: string }> {
-  let discountId = await findAutomaticDiscountId(admin);
+  let discountNode = await findMembershipDiscountNode(admin);
+  let discountId = discountNode?.discountId ?? null;
 
   if (!discountId) {
     discountId = await createAutomaticDiscount(admin, config);
+    discountNode = await findMembershipDiscountNode(admin);
   } else {
     await setDiscountMetafield(admin, discountId, config);
+  }
+
+  if (discountNode && discountNode.status !== "ACTIVE") {
+    await activateAutomaticDiscount(admin, discountNode.nodeId);
+  }
+
+  if (!discountId) {
+    throw new Error("Member pricing discount could not be created or found.");
+  }
+
+  try {
+    await saveMembershipConfig(admin, config);
+  } catch (error) {
+    console.warn("Membership metaobject sync failed (non-fatal):", error);
   }
 
   return { discountId };
@@ -223,7 +308,7 @@ export async function loadMembershipConfigFromDiscount(
 
   for (const node of nodes) {
     const discount = node.discount as { title?: string } | undefined;
-    if (discount?.title !== MEMBERSHIP_DISCOUNT_TITLE) continue;
+    if (discount?.title !== MEMBERSHIP_DISCOUNT_TITLE && discount?.title !== LEGACY_MEMBERSHIP_DISCOUNT_TITLE) continue;
 
     const jsonValue = (node.metafield as { jsonValue?: unknown } | undefined)
       ?.jsonValue;

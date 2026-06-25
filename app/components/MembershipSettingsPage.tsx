@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { Form, useActionData, useLoaderData, useNavigation } from "react-router";
+import { Form, useActionData, useLoaderData, useNavigation, useOutletContext } from "react-router";
 
 import { useAppBridge } from "@shopify/app-bridge-react";
 
@@ -11,6 +11,13 @@ import type { MembershipConfig } from "../lib/membership.shared";
 import type { MemberPriceCatalogStatus } from "../lib/membership-products.server";
 
 import type { ThemeCardSetupGuide } from "../lib/theme-card-install.server";
+
+import {
+  APP_BILLING_AMOUNT_USD,
+  APP_BILLING_TRIAL_DAYS,
+  APP_DISPLAY_NAME,
+  APP_TAGLINE,
+} from "../lib/billing.shared";
 
 import styles from "../styles/membership-settings.module.css";
 
@@ -26,6 +33,8 @@ type LoaderData = {
 
   cardBlockEditorUrl: string | null;
 
+  cartBlockEditorUrl: string | null;
+
   cardStylesEmbedUrl: string | null;
 
   themesAdminUrl: string | null;
@@ -37,8 +46,6 @@ type LoaderData = {
   catalogStatus: MemberPriceCatalogStatus;
 
   cardSnippetSource: string;
-
-  appProxyTestUrl: string | null;
 
 };
 
@@ -54,6 +61,22 @@ type ActionData =
 
 
 
+type BillingStatus = {
+
+  hasActivePayment: boolean;
+
+  isTest: boolean;
+
+  trialDays: number;
+
+  planName: string | null;
+
+  status: string | null;
+
+};
+
+
+
 export default function MembershipSettingsPage() {
 
   const {
@@ -65,6 +88,8 @@ export default function MembershipSettingsPage() {
     themeEditorUrl,
 
     cardBlockEditorUrl,
+
+    cartBlockEditorUrl,
 
     cardStylesEmbedUrl,
 
@@ -78,9 +103,9 @@ export default function MembershipSettingsPage() {
 
     cardSnippetSource,
 
-    appProxyTestUrl,
-
   } = useLoaderData<LoaderData>();
+
+  const { billingStatus } = useOutletContext<{ billingStatus: BillingStatus }>();
 
   const actionData = useActionData<ActionData>();
 
@@ -183,7 +208,7 @@ export default function MembershipSettingsPage() {
 
   return (
 
-    <s-page heading="Member pricing">
+    <s-page heading={APP_DISPLAY_NAME}>
 
       <s-button
 
@@ -206,6 +231,8 @@ export default function MembershipSettingsPage() {
 
 
       <div className={styles.page}>
+
+        <p className={styles.pageTagline}>{APP_TAGLINE}</p>
 
         <s-section heading="Program">
 
@@ -241,14 +268,13 @@ export default function MembershipSettingsPage() {
 
           </div>
 
-          <p className={`${styles.hint} ${styles.hintTop} ${styles.hintBottom}`}>
+          <p className={`${styles.hint} ${styles.hintTop}`}>
 
-            Logged-in customers get member prices at checkout. Set member prices
-
-            on products and variants using the Member price metafield. Enable the
-
-            Campaign metafield on a product to show RRP with a strikethrough.
-
+            Logged-in customers get member prices at checkout. Open the app and
+            click <strong>Save</strong> if the badge below shows the checkout
+            discount is not active. Set member prices on products and variants
+            using the Member price metafield. Enable the Campaign metafield on
+            a product to show RRP with a strikethrough.
           </p>
 
           {themeEditorUrl ? (
@@ -263,6 +289,32 @@ export default function MembershipSettingsPage() {
 
             </s-stack>
 
+          ) : null}
+
+        </s-section>
+
+
+
+        <s-section heading="Cart page">
+
+          <p className={styles.hint}>
+
+            Membership savings on the cart page appear for logged-in customers.
+
+            Add the <strong>Member pricing (cart)</strong> block on the cart
+
+            template, or use the <code className={styles.inlineCodeInline}>member-pricing-cart-line</code>{" "}
+
+            snippet inside your theme&apos;s cart line item template.
+
+          </p>
+
+          {cartBlockEditorUrl ? (
+            <s-stack direction="inline" gap="base">
+              <s-link href={cartBlockEditorUrl} target="_blank">
+                Add cart page block
+              </s-link>
+            </s-stack>
           ) : null}
 
         </s-section>
@@ -409,9 +461,9 @@ export default function MembershipSettingsPage() {
 
           </h3>
 
-          <p className={styles.hint}>
+          <p className={`${styles.hint} ${styles.hintTop} ${styles.hintBottom}`}>
 
-            Yes — for Dawn and similar themes, the snippet in card-product.liquid
+            For Dawn and similar themes, the snippet in card-product.liquid
 
             is the right approach. The snippet alone cannot read app metafields
 
@@ -426,19 +478,6 @@ export default function MembershipSettingsPage() {
             embed enabled + the app deployed.
 
           </p>
-
-          {appProxyTestUrl ? (
-            <p className={styles.metaLine}>
-              Test pricing API:{" "}
-              <s-link href={appProxyTestUrl} target="_blank">
-                open proxy response
-              </s-link>
-              {" "}
-              (should return JSON with memberCents &gt; 0 for that product)
-            </p>
-          ) : null}
-
-
 
           {cardSetup?.canReadTheme ? (
 
@@ -640,11 +679,16 @@ export default function MembershipSettingsPage() {
 
 
 
-        <s-section heading="Display labels">
+        <s-section heading="Settings">
 
           <Form method="post" id="membership-settings-form">
 
             <input type="hidden" name="title" value={config.title} />
+
+            <p className={`${styles.hint} ${styles.hintBottom}`}>
+              Control whether member pricing is active and customize the text
+              shoppers see on your storefront and at checkout.
+            </p>
 
             <div className={styles.fieldStack}>
 
@@ -683,6 +727,8 @@ export default function MembershipSettingsPage() {
                 onChange={(event) => setMemberLabel(event.currentTarget.value)}
 
                 autocomplete="off"
+
+                details="Shown on product pages and collection cards"
 
               />
 
@@ -727,6 +773,26 @@ export default function MembershipSettingsPage() {
         </s-section>
 
       </div>
+
+
+
+      <s-section slot="aside" heading="Plan">
+
+        <p className={styles.hint}>
+
+          <strong>${APP_BILLING_AMOUNT_USD}/month</strong> after a{" "}
+
+          <strong>{APP_BILLING_TRIAL_DAYS}-day free trial</strong>.
+
+        </p>
+
+        {billingStatus.hasActivePayment && billingStatus.planName ? (
+          <p className={styles.metaLine}>
+            Current plan: {billingStatus.planName}
+          </p>
+        ) : null}
+
+      </s-section>
 
 
 

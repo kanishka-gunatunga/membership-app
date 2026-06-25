@@ -2,6 +2,7 @@ query CartInput {
   cart {
     buyerIdentity {
       isAuthenticated
+      email
       customer {
         id
       }
@@ -21,12 +22,14 @@ query CartInput {
         __typename
         ... on ProductVariant {
           id
-          memberPrice: metafield(key: "member_price") {
+          memberPrice: metafield(namespace: "$app", key: "member_price") {
             jsonValue
+            value
           }
           product {
-            memberPrice: metafield(key: "member_price") {
+            memberPrice: metafield(namespace: "$app", key: "member_price") {
               jsonValue
+              value
             }
           }
         }
@@ -35,7 +38,7 @@ query CartInput {
   }
   discount {
     discountClasses
-    metafield(key: "membership_config") {
+    metafield(namespace: "$app", key: "membership_config") {
       jsonValue
     }
   }

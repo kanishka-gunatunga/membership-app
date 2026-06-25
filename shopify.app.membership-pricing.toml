@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "537491f3d66fcd9b3b88930597dda328"
-name = "Membership Pricing"
+name = "MemberPro"
 application_url = "https://example.com"
 embedded = true
 
@@ -11,12 +11,30 @@ automatically_update_urls_on_dev = true
 [webhooks]
 api_version = "2026-07"
 
+  [[webhooks.subscriptions]]
+  compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
+  uri = "/webhooks/compliance"
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/app/uninstalled"
+  topics = ["app/uninstalled"]
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/app/scopes_update"
+  topics = ["app/scopes_update"]
+
+  # orders/paid requires Protected Customer Data approval in Partner Dashboard.
+  # Re-enable after approval: https://shopify.dev/docs/apps/launch/protected-customer-data
+  # [[webhooks.subscriptions]]
+  # uri = "/webhooks/orders/paid"
+  # topics = ["orders/paid"]
+
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_products,write_discounts,write_products,read_themes"
+scopes = "read_metaobjects,write_metaobjects,write_metaobject_definitions,read_products,write_products,write_discounts,read_themes"
 
 [auth]
-redirect_urls = [ "https://example.com/api/auth" ]
+redirect_urls = [ "https://example.com/auth/callback" ]
 
 [app_proxy]
 url = "https://example.com"

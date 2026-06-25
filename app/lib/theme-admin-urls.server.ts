@@ -67,6 +67,18 @@ export function getThemeCollectionCardBlockUrl(
   return `https://admin.shopify.com/store/${handle}/themes/${themeId}/editor?template=collection&addAppBlockId=${apiKey}/${appBlockHandle}`;
 }
 
+/** Opens the cart template in the theme editor to add the cart pricing block. */
+export function getThemeCartBlockUrl(
+  shop: string,
+  themeGid: string,
+  apiKey: string,
+  appBlockHandle: string,
+): string {
+  const handle = getStoreHandle(shop);
+  const themeId = getThemeNumericId(themeGid);
+  return `https://admin.shopify.com/store/${handle}/themes/${themeId}/editor?template=cart&addAppBlockId=${apiKey}/${appBlockHandle}`;
+}
+
 export function getProductsAdminUrl(shop: string): string {
   const handle = getStoreHandle(shop);
   return `https://admin.shopify.com/store/${handle}/products`;

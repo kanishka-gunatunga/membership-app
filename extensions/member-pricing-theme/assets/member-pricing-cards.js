@@ -1,5 +1,6 @@
 (function () {
   var PROXY_PATH = '/apps/membership-pricing/prices';
+  var DEFAULT_LABELS = { memberLabel: 'Member price', rrpLabel: 'RRP' };
 
   function formatMoney(cents) {
     if (typeof Shopify !== 'undefined' && typeof Shopify.formatMoney === 'function') {
@@ -8,23 +9,27 @@
     return '$' + (cents / 100).toFixed(2);
   }
 
-  function renderMemberPricing(rrpCents, memberCents, campaignStrike) {
+  function renderMemberPricing(rrpCents, memberCents, campaignStrike, labels) {
     var rrpClass =
       'member-pricing__rrp' + (campaignStrike ? ' member-pricing__rrp--strike' : '');
     return (
       '<div class="member-pricing__prices member-pricing__prices--stacked">' +
+      '<p class="member-pricing__member member-pricing__member--card">' +
+      '<span class="member-pricing__member-label">' +
+      labels.memberLabel +
+      '</span> ' +
+      '<span class="member-pricing__member-amount">' +
+      formatMoney(memberCents) +
+      '</span>' +
+      '</p>' +
       '<p class="' +
       rrpClass +
       '">' +
-      '<span class="member-pricing__rrp-label">RRP</span> ' +
+      '<span class="member-pricing__rrp-label">' +
+      labels.rrpLabel +
+      '</span> ' +
       '<span class="member-pricing__rrp-amount">' +
       formatMoney(rrpCents) +
-      '</span>' +
-      '</p>' +
-      '<p class="member-pricing__member member-pricing__member--card">' +
-      '<span class="member-pricing__member-label">Members</span> ' +
-      '<span class="member-pricing__member-amount">' +
-      formatMoney(memberCents) +
       '</span>' +
       '</p>' +
       '</div>'
@@ -41,7 +46,7 @@
     );
   }
 
-  function hydrateCard(card, pricing) {
+  function hydrateCard(card, pricing, labels) {
     var slot = card.querySelector('[data-member-pricing-content]');
     if (!slot) return;
 
@@ -54,6 +59,7 @@
         rrpCents,
         memberCents,
         pricing.campaignStrike,
+        labels,
       );
       card.setAttribute('data-member-pricing-has-member', 'true');
     } else {
@@ -89,8 +95,9 @@
       })
       .then(function (data) {
         var products = data.products || {};
+        var labels = data.labels || DEFAULT_LABELS;
         if (Object.keys(products).length) {
-          console.info('[Membership Pricing] Card prices loaded', products);
+          console.info('[MemberPro] Card prices loaded', products);
         }
         cards.forEach(function (card) {
           var handle = card.getAttribute('data-product-handle');
@@ -102,11 +109,11 @@
             campaignStrike: false,
           };
 
-          hydrateCard(card, pricing);
+          hydrateCard(card, pricing, labels);
         });
       })
       .catch(function (error) {
-        console.warn('[Membership Pricing] Could not load card prices:', error);
+        console.warn('[MemberPro] Could not load card prices:', error);
         cards.forEach(function (card) {
           var slot = card.querySelector('[data-member-pricing-content]');
           var rrpCents = Number(card.getAttribute('data-rrp-cents')) || 0;

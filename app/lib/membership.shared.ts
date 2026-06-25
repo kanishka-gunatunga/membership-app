@@ -8,7 +8,15 @@ export const MEMBERSHIP_CONFIG_METAOBJECT_TYPE = "$app:membership_config";
 
 export const MEMBERSHIP_DISCOUNT_METAFIELD_KEY = "membership_config";
 
-export const MEMBERSHIP_DISCOUNT_TITLE = "Member Pricing";
+export const MEMBERSHIP_DISCOUNT_TITLE = "MemberPro";
+
+/** Previous checkout discount title — kept for existing installs. */
+export const LEGACY_MEMBERSHIP_DISCOUNT_TITLE = "Member Pricing";
+
+export const MEMBERSHIP_DISCOUNT_TITLES = [
+  MEMBERSHIP_DISCOUNT_TITLE,
+  LEGACY_MEMBERSHIP_DISCOUNT_TITLE,
+] as const;
 
 export type MoneyValue = {
   amount: string;
@@ -23,7 +31,7 @@ export type MembershipConfig = {
 };
 
 export const DEFAULT_MEMBERSHIP_CONFIG: MembershipConfig = {
-  title: "Default membership",
+  title: "MemberPro",
   enabled: true,
   memberLabel: "Member price",
   savingsLabel: "You save",
@@ -37,6 +45,15 @@ export function parseMoneyToCents(amount: string | number): number {
 
 export function centsToDecimalAmount(cents: number): string {
   return (cents / 100).toFixed(2);
+}
+
+export function parseCampaignStrike(
+  metafield: { jsonValue?: unknown; value?: string | null } | null | undefined,
+): boolean {
+  if (!metafield) return false;
+  if (metafield.jsonValue === true || metafield.jsonValue === "true") return true;
+  if (metafield.value === "true") return true;
+  return false;
 }
 
 export function resolveMemberPriceCents(

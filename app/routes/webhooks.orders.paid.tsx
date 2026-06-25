@@ -1,5 +1,9 @@
 import type { ActionFunctionArgs } from "react-router";
 import { authenticate } from "../shopify.server";
+import {
+  persistMemberOrderSnapshot,
+  type OrderPaidWebhookPayload,
+} from "../lib/member-order-analytics.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { shop, topic } = await authenticate.webhook(request);
@@ -8,8 +12,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     return new Response();
   }
 
-  // Module 6: persist member discount analytics from order payload.
-  console.log(`orders/paid webhook received for ${shop}`);
+  const payload = (await request.json()) as OrderPaidWebhookPayload;
+
+  try {
+    await persistMemberOrderSnapshot(shop, payload);
+  } catch (error) {
+    console.error(`orders/paid snapshot failed for ${shop}:`, error);
+  }
 
   return new Response();
 };
