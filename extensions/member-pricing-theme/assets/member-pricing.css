@@ -201,6 +201,12 @@
   opacity: 0.75;
 }
 
+/* Hide duplicate cart line totals when discount already shows price in details */
+tr.cart-item:has(.cart-item__details .cart-item__discounted-prices):has(.cart-item__details .discounts__discount) > td.cart-item__totals,
+.cart-item:has(.cart-item__details .cart-item__discounted-prices):has(.cart-item__details .discounts__discount) > .cart-item__totals {
+  display: none !important;
+}
+
 .member-pricing__placeholder {
   margin: 0;
   font-size: 0.9em;

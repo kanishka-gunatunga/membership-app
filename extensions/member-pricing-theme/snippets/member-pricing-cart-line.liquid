@@ -1,21 +1,6 @@
 {%- comment -%}
-  Cart line member pricing snippet.
-  Add to your theme cart line item template:
-  {% render 'member-pricing-cart-line', line_item: item %}
+  Optional — usually not needed on cart drawer or cart page.
+  When the MemberPro discount applies, the theme shows strikethrough price and
+  savings text automatically (from Savings label in app settings).
+  Remove this render from your theme cart line if you added it earlier.
 {%- endcomment -%}
-
-{%- liquid
-  assign mp_member_label = member_label | default: 'Members'
-  assign mp_rrp_label = rrp_label | default: 'RRP'
-  assign mp_membership_label = membership_label | default: 'My membership'
-  assign mp_login_prompt = login_prompt | default: ''
--%}
-
-{%- render 'member-pricing-render',
-  line_item: line_item,
-  layout: 'cart-line',
-  member_label: mp_member_label,
-  rrp_label: mp_rrp_label,
-  membership_label: mp_membership_label,
-  login_prompt: mp_login_prompt
--%}

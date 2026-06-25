@@ -54,7 +54,15 @@
   assign currency_code = cart.currency.iso_code | default: shop.currency
 -%}
 
-{%- if has_member_price or request.design_mode -%}
+{%- if layout == 'cart-line' -%}
+  {%- if request.design_mode -%}
+    <div class="member-pricing member-pricing--cart-line">
+      <p class="member-pricing__placeholder">
+        {{ 'member_pricing.cart_placeholder' | t }}
+      </p>
+    </div>
+  {%- endif -%}
+{%- elsif has_member_price or request.design_mode -%}
   <div
     class="member-pricing member-pricing--{{ layout }}"
     {% if block_id != blank %}data-member-pricing-block="{{ block_id }}"{% endif %}
@@ -83,26 +91,6 @@
         {%- if request.design_mode and has_member_price == false -%}
           <p class="member-pricing__placeholder">
             {{ 'member_pricing.placeholder' | t }}
-          </p>
-        {%- endif -%}
-
-      {%- when 'cart-line' -%}
-        {%- if customer and has_member_price -%}
-          <div class="member-pricing__cart-membership">
-            <span class="member-pricing__cart-badge" aria-hidden="true">&#9670;</span>
-            <span class="member-pricing__cart-membership-label">
-              {{ membership_label | escape }}(-{{ savings_total_cents | money }})
-            </span>
-          </div>
-          <div class="member-pricing__cart-prices">
-            <span class="member-pricing__cart-member-amount">{{ member_cents | money }}</span>
-            <span class="member-pricing__cart-rrp{% if campaign_strike %} member-pricing__rrp--strike{% endif %}">
-              {{ rrp_cents | money }}
-            </span>
-          </div>
-        {%- elsif request.design_mode -%}
-          <p class="member-pricing__placeholder">
-            {{ 'member_pricing.cart_placeholder' | t }}
           </p>
         {%- endif -%}
     {%- endcase -%}

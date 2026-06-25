@@ -141,4 +141,40 @@
 
   window.addEventListener('load', scheduleHydrate);
   document.addEventListener('shopify:section:load', scheduleHydrate);
+
+  /** Dawn cart drawer/page: hide duplicate TOTAL column when discount already shows unit price in details */
+  function hideDuplicateCartLineTotals() {
+    var rows = document.querySelectorAll('tr.cart-item, .cart-item');
+    rows.forEach(function (row) {
+      var details = row.querySelector('.cart-item__details');
+      if (!details) return;
+
+      var hasMemberDiscountLine =
+        details.querySelector('.cart-item__discounted-prices') &&
+        details.querySelector('.discounts__discount');
+
+      if (!hasMemberDiscountLine) return;
+
+      row.querySelectorAll('.cart-item__totals').forEach(function (totals) {
+        totals.style.setProperty('display', 'none', 'important');
+      });
+    });
+  }
+
+  function scheduleCartDrawerFix() {
+    hideDuplicateCartLineTotals();
+    window.setTimeout(hideDuplicateCartLineTotals, 100);
+    window.setTimeout(hideDuplicateCartLineTotals, 500);
+  }
+
+  window.MemberPricingCart = { hideDuplicateTotals: scheduleCartDrawerFix };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', scheduleCartDrawerFix);
+  } else {
+    scheduleCartDrawerFix();
+  }
+
+  window.addEventListener('load', scheduleCartDrawerFix);
+  document.addEventListener('shopify:section:load', scheduleCartDrawerFix);
 })();

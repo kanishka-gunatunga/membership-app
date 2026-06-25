@@ -8,7 +8,8 @@
     "login_suffix": " to your account first.",
     "placeholder": "MemberPro pricing appears here when a product or variant has a Member price metafield lower than the regular price.",
     "card_placeholder": "Add this block inside a product card section to preview member pricing.",
-    "cart_placeholder": "Membership savings appear here for logged-in customers with member-priced items.",
+    "cart_placeholder": "Member savings on cart lines come from the automatic discount (strikethrough price + savings text). No extra block needed.",
+    "cart_design_hint": "On the live store, logged-in customers see member pricing from the checkout discount — not from this block.",
     "cart_block_placeholder": "Add items to the cart to preview membership pricing."
   },
   "member_pricing_card": {

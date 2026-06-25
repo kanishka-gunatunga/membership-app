@@ -295,24 +295,38 @@ export default function MembershipSettingsPage() {
 
 
 
-        <s-section heading="Cart page">
+        <s-section heading="Cart & checkout">
 
           <p className={styles.hint}>
 
-            Membership savings on the cart page appear for logged-in customers.
+            For logged-in customers, the automatic <strong>MemberPro</strong>{" "}
 
-            Add the <strong>Member pricing (cart)</strong> block on the cart
+            discount updates cart and checkout lines: strikethrough regular
 
-            template, or use the <code className={styles.inlineCodeInline}>member-pricing-cart-line</code>{" "}
+            price, member price, and savings text (from <strong>Savings label</strong>{" "}
 
-            snippet inside your theme&apos;s cart line item template.
+            in Settings — e.g. &quot;You save $20&quot;).
+
+          </p>
+
+          <p className={`${styles.hint} ${styles.hintTop}`}>
+
+            You do <strong>not</strong> need a cart snippet or cart block for
+
+            prices. Remove <code className={styles.inlineCodeInline}>member-pricing-cart-line</code>{" "}
+
+            from your theme cart line if you added it. Enable the{" "}
+
+            <strong>Card pricing styles</strong> app embed so the cart drawer
+
+            hides the duplicate TOTAL column price.
 
           </p>
 
           {cartBlockEditorUrl ? (
             <s-stack direction="inline" gap="base">
               <s-link href={cartBlockEditorUrl} target="_blank">
-                Add cart page block
+                Open cart template
               </s-link>
             </s-stack>
           ) : null}
