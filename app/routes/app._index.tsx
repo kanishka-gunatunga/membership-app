@@ -11,7 +11,10 @@ import {
   loadMembershipConfigFromDiscount,
   syncMembershipDiscount,
 } from "../lib/membership-discount.server";
-import { DEFAULT_MEMBERSHIP_CONFIG } from "../lib/membership.shared";
+import {
+  DEFAULT_MEMBERSHIP_CONFIG,
+  parseMetafieldSource,
+} from "../lib/membership.shared";
 import { getThemeCardSetupGuide, getCardSnippetSource } from "../lib/theme-card-install.server";
 import { getMemberPriceCatalogStatus } from "../lib/membership-products.server";
 import {
@@ -37,13 +40,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
   }
 
-  const [config, cardSetup, mainTheme, catalogStatus] = await Promise.all([
-    loadMembershipConfigFromDiscount(admin),
+  const config = await loadMembershipConfigFromDiscount(admin);
+  const [cardSetup, mainTheme, catalogStatus] = await Promise.all([
     session.shop
       ? getThemeCardSetupGuide(admin, session.shop)
       : Promise.resolve(null),
     loadMainTheme(admin),
-    getMemberPriceCatalogStatus(admin),
+    getMemberPriceCatalogStatus(admin, config.metafieldSource),
   ]);
 
   const apiKey = process.env.SHOPIFY_API_KEY || "";
@@ -102,6 +105,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     savingsLabel:
       String(formData.get("savingsLabel") || "").trim() ||
       DEFAULT_MEMBERSHIP_CONFIG.savingsLabel,
+    metafieldSource: parseMetafieldSource(formData.get("metafieldSource")),
   };
 
   try {

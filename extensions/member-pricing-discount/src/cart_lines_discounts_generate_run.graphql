@@ -2,10 +2,6 @@ query CartInput {
   cart {
     buyerIdentity {
       isAuthenticated
-      email
-      customer {
-        id
-      }
     }
     lines {
       id
@@ -14,22 +10,28 @@ query CartInput {
         amountPerQuantity {
           amount
         }
-        subtotalAmount {
-          amount
-        }
       }
       merchandise {
         __typename
         ... on ProductVariant {
-          id
-          memberPrice: metafield(namespace: "$app", key: "member_price") {
+          appMemberPrice: metafield(namespace: "$app", key: "member_price") {
             jsonValue
-            value
+          }
+          customMemberPrice: metafield(
+            namespace: "custom"
+            key: "variant_member_price"
+          ) {
+            jsonValue
           }
           product {
-            memberPrice: metafield(namespace: "$app", key: "member_price") {
+            appMemberPrice: metafield(namespace: "$app", key: "member_price") {
               jsonValue
-              value
+            }
+            customMemberPrice: metafield(
+              namespace: "custom"
+              key: "member_price"
+            ) {
+              jsonValue
             }
           }
         }
@@ -40,19 +42,6 @@ query CartInput {
     discountClasses
     metafield(namespace: "$app", key: "membership_config") {
       jsonValue
-    }
-  }
-  shop {
-    metaobject(handle: {type: "$app:membership_config", handle: "default"}) {
-      enabled: field(key: "enabled") {
-        value
-      }
-      memberLabel: field(key: "member_label") {
-        value
-      }
-      savingsLabel: field(key: "savings_label") {
-        value
-      }
     }
   }
 }

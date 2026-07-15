@@ -10,11 +10,19 @@ type MoneyValue = {
   currencyCode?: string;
 };
 
+type MetafieldSource = 'app' | 'custom';
+
 type FunctionConfig = {
   enabled: boolean;
   memberLabel: string;
   savingsLabel: string;
+  metafieldSource: MetafieldSource;
 };
+
+type MoneyMetafield = {
+  jsonValue?: unknown;
+  value?: string | null;
+} | null;
 
 function parseMoneyToCents(amount: string | number): number {
   const value = typeof amount === 'number' ? amount : Number.parseFloat(amount);
@@ -30,7 +38,12 @@ const DEFAULT_FUNCTION_CONFIG: FunctionConfig = {
   enabled: true,
   memberLabel: 'Member price',
   savingsLabel: 'You save',
+  metafieldSource: 'app',
 };
+
+function parseMetafieldSource(value: unknown): MetafieldSource {
+  return value === 'custom' ? 'custom' : 'app';
+}
 
 function parseMoneyMetafield(
   jsonValue: unknown,
@@ -75,7 +88,16 @@ function resolveMemberPriceCents(
   return cents > 0 ? cents : null;
 }
 
-function parseRecordConfig(record: Record<string, unknown>): FunctionConfig | null {
+function pickMoneyMetafield(
+  source: MetafieldSource,
+  appMetafield: MoneyMetafield,
+  customMetafield: MoneyMetafield,
+): MoneyValue | null {
+  const selected = source === 'custom' ? customMetafield : appMetafield;
+  return parseMoneyMetafield(selected?.jsonValue, selected?.value);
+}
+
+function parseRecordConfig(record: Record<string, unknown>): FunctionConfig {
   return {
     enabled: record.enabled !== false,
     memberLabel:
@@ -86,17 +108,7 @@ function parseRecordConfig(record: Record<string, unknown>): FunctionConfig | nu
       typeof record.savingsLabel === 'string' && record.savingsLabel.trim()
         ? record.savingsLabel
         : 'You save',
-  };
-}
-
-function parseMetaobjectConfig(input: CartInput): FunctionConfig | null {
-  const node = input.shop.metaobject;
-  if (!node) return null;
-
-  return {
-    enabled: node.enabled?.value !== 'false',
-    memberLabel: node.memberLabel?.value || 'Member price',
-    savingsLabel: node.savingsLabel?.value || 'You save',
+    metafieldSource: parseMetafieldSource(record.metafieldSource),
   };
 }
 
@@ -110,11 +122,9 @@ function parseDiscountMetafieldConfig(input: CartInput): FunctionConfig | null {
 }
 
 function parseFunctionConfig(input: CartInput): FunctionConfig {
-  return (
-    parseMetaobjectConfig(input) ??
-    parseDiscountMetafieldConfig(input) ??
-    DEFAULT_FUNCTION_CONFIG
-  );
+  // Config comes from the discount metafield only (keeps input-query complexity
+  // under Shopify's limit). Theme/Liquid still reads the membership metaobject.
+  return parseDiscountMetafieldConfig(input) ?? DEFAULT_FUNCTION_CONFIG;
 }
 
 function isLevelOneMember(input: CartInput): boolean {
@@ -154,13 +164,15 @@ export function cartLinesDiscountsGenerateRun(
   for (const line of input.cart.lines) {
     if (line.merchandise.__typename !== 'ProductVariant') continue;
 
-    const variantMemberPrice = parseMoneyMetafield(
-      line.merchandise.memberPrice?.jsonValue,
-      line.merchandise.memberPrice?.value,
+    const variantMemberPrice = pickMoneyMetafield(
+      functionConfig.metafieldSource,
+      line.merchandise.appMemberPrice,
+      line.merchandise.customMemberPrice,
     );
-    const productMemberPrice = parseMoneyMetafield(
-      line.merchandise.product?.memberPrice?.jsonValue,
-      line.merchandise.product?.memberPrice?.value,
+    const productMemberPrice = pickMoneyMetafield(
+      functionConfig.metafieldSource,
+      line.merchandise.product?.appMemberPrice,
+      line.merchandise.product?.customMemberPrice,
     );
     const memberPriceCents = resolveMemberPriceCents(
       variantMemberPrice,

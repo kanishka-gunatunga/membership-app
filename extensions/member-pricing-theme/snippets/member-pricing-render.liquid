@@ -23,8 +23,22 @@
     assign mp_quantity = 1
   endif
 
-  assign variant_member_metafield = mp_variant.metafields['$app'].member_price
-  assign product_member_metafield = mp_product.metafields['$app'].member_price
+  assign mp_metafield_source = 'app'
+  assign mp_config = shop.metaobjects.membership_config.default
+  if mp_config != blank and mp_config.metafield_source.value != blank
+    assign mp_metafield_source = mp_config.metafield_source.value
+  endif
+
+  if mp_metafield_source == 'custom'
+    assign variant_member_metafield = mp_variant.metafields.custom.variant_member_price
+    assign product_member_metafield = mp_product.metafields.custom.member_price
+    assign campaign_metafield = mp_product.metafields.custom.cross_rrp
+  else
+    assign variant_member_metafield = mp_variant.metafields['$app'].member_price
+    assign product_member_metafield = mp_product.metafields['$app'].member_price
+    assign campaign_metafield = mp_product.metafields['$app'].campaign
+  endif
+
   assign member_metafield = variant_member_metafield | default: product_member_metafield
 
   assign rrp_cents = mp_variant.price
@@ -43,7 +57,6 @@
     assign has_member_price = true
   endif
 
-  assign campaign_metafield = mp_product.metafields['$app'].campaign
   assign campaign_strike = false
   if campaign_metafield.value == true
     assign campaign_strike = true

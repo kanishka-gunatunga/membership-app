@@ -6,7 +6,10 @@ import { useAppBridge } from "@shopify/app-bridge-react";
 
 
 
-import type { MembershipConfig } from "../lib/membership.shared";
+import type {
+  MembershipConfig,
+  MetafieldSource,
+} from "../lib/membership.shared";
 
 import type { MemberPriceCatalogStatus } from "../lib/membership-products.server";
 
@@ -133,6 +136,10 @@ export default function MembershipSettingsPage() {
 
   const [savingsLabel, setSavingsLabel] = useState(config.savingsLabel);
 
+  const [metafieldSource, setMetafieldSource] = useState<MetafieldSource>(
+    config.metafieldSource ?? "app",
+  );
+
   const [copiedRenderLine, setCopiedRenderLine] = useState(false);
 
   const [copiedSnippetFile, setCopiedSnippetFile] = useState(false);
@@ -147,7 +154,14 @@ export default function MembershipSettingsPage() {
 
     setSavingsLabel(config.savingsLabel);
 
-  }, [config.enabled, config.memberLabel, config.savingsLabel]);
+    setMetafieldSource(config.metafieldSource ?? "app");
+
+  }, [
+    config.enabled,
+    config.memberLabel,
+    config.savingsLabel,
+    config.metafieldSource,
+  ]);
 
 
 
@@ -271,10 +285,10 @@ export default function MembershipSettingsPage() {
           <p className={`${styles.hint} ${styles.hintTop}`}>
 
             Logged-in customers get member prices at checkout. Open the app and
-            click <strong>Save</strong> if the badge below shows the checkout
-            discount is not active. Set member prices on products and variants
-            using the Member price metafield. Enable the Campaign metafield on
-            a product to show RRP with a strikethrough.
+            click <strong>Save</strong> if the checkout discount badge is not
+            active. Set member prices on products and variants, then enable
+            Campaign when you want RRP shown with a strikethrough.
+
           </p>
 
           {themeEditorUrl ? (
@@ -369,7 +383,7 @@ export default function MembershipSettingsPage() {
 
             Cards show stacked <strong>RRP</strong> and <strong>Member</strong>{" "}
 
-            prices only when a product has a Member price metafield lower than
+            prices only when a product has a member price metafield lower than
 
             its regular price. If you only see the normal theme price, set
 
@@ -391,7 +405,9 @@ export default function MembershipSettingsPage() {
 
               {" · "}
 
-              Edit a product → Metafields → Member price
+              {metafieldSource === "custom"
+                ? "Edit a product → Metafields → your store’s member price fields"
+                : "Edit a product → Metafields → Member price"}
 
             </p>
 
@@ -728,6 +744,63 @@ export default function MembershipSettingsPage() {
 
               </label>
 
+              <fieldset className={styles.choiceGroup}>
+                <legend className={styles.choiceLegend}>
+                  Price data source
+                </legend>
+                <p className={styles.hint}>
+                  Choose how MemberPro should read member prices and campaign
+                  flags for this shop.
+                </p>
+                <label
+                  className={`${styles.choiceOption} ${
+                    metafieldSource === "app" ? styles.choiceOptionSelected : ""
+                  }`}
+                >
+                  <input
+                    name="metafieldSource"
+                    type="radio"
+                    value="app"
+                    checked={metafieldSource === "app"}
+                    onChange={() => setMetafieldSource("app")}
+                  />
+                  <span className={styles.choiceCopy}>
+                    <span className={styles.choiceTitle}>
+                      Managed by MemberPro
+                    </span>
+                    <span className={styles.choiceDescription}>
+                      Recommended for most stores. The app provides Member price
+                      and Campaign fields on products and variants.
+                    </span>
+                  </span>
+                </label>
+                <label
+                  className={`${styles.choiceOption} ${
+                    metafieldSource === "custom"
+                      ? styles.choiceOptionSelected
+                      : ""
+                  }`}
+                >
+                  <input
+                    name="metafieldSource"
+                    type="radio"
+                    value="custom"
+                    checked={metafieldSource === "custom"}
+                    onChange={() => setMetafieldSource("custom")}
+                  />
+                  <span className={styles.choiceCopy}>
+                    <span className={styles.choiceTitle}>
+                      Use existing store fields
+                    </span>
+                    <span className={styles.choiceDescription}>
+                      For stores that already maintain member prices. Connects
+                      to your current product and variant price fields so you
+                      don’t need to re-enter data.
+                    </span>
+                  </span>
+                </label>
+              </fieldset>
+
 
 
               <s-text-field
@@ -823,6 +896,13 @@ export default function MembershipSettingsPage() {
           <s-list-item>
 
             Variant member price overrides product member price.
+
+          </s-list-item>
+
+          <s-list-item>
+
+            Settings → Price data source chooses MemberPro-managed fields or
+            your existing store fields.
 
           </s-list-item>
 

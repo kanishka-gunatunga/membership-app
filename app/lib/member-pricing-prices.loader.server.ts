@@ -27,10 +27,12 @@ export async function memberPricingPricesLoader({ request }: LoaderFunctionArgs)
       .map((handle) => handle.trim())
       .filter(Boolean) ?? [];
 
-  const [products, config] = await Promise.all([
-    getStorefrontPricingByHandles(admin, handles),
-    loadMembershipConfigFromDiscount(admin),
-  ]);
+  const config = await loadMembershipConfigFromDiscount(admin);
+  const products = await getStorefrontPricingByHandles(
+    admin,
+    handles,
+    config.metafieldSource,
+  );
 
   return Response.json(
     {

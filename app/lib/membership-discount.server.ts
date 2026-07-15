@@ -5,6 +5,7 @@ import {
   MEMBERSHIP_DISCOUNT_METAFIELD_KEY,
   MEMBERSHIP_DISCOUNT_TITLE,
   MEMBERSHIP_DISCOUNT_TITLES,
+  parseMetafieldSource,
   type MembershipConfig,
 } from "./membership.shared";
 import { saveMembershipConfig } from "./membership-config.server";
@@ -102,6 +103,7 @@ function functionConfigJson(config: MembershipConfig): string {
     enabled: config.enabled,
     memberLabel: config.memberLabel,
     savingsLabel: config.savingsLabel,
+    metafieldSource: config.metafieldSource,
   });
 }
 
@@ -331,6 +333,7 @@ export async function loadMembershipConfigFromDiscount(
         typeof record.savingsLabel === "string" && record.savingsLabel.trim()
           ? record.savingsLabel
           : DEFAULT_MEMBERSHIP_CONFIG.savingsLabel,
+      metafieldSource: parseMetafieldSource(record.metafieldSource),
     };
   }
 

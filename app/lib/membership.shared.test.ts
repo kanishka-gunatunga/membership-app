@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   parseCampaignStrike,
+  parseMetafieldSource,
   parseMoneyToCents,
   resolveMemberPriceCents,
 } from "./membership.shared";
@@ -38,5 +39,16 @@ describe("resolveMemberPriceCents", () => {
         { amount: "20.00", currencyCode: "USD" },
       ),
     ).toBe(1000);
+  });
+});
+
+describe("parseMetafieldSource", () => {
+  it("accepts custom source", () => {
+    expect(parseMetafieldSource("custom")).toBe("custom");
+  });
+
+  it("defaults to app for unknown values", () => {
+    expect(parseMetafieldSource("other")).toBe("app");
+    expect(parseMetafieldSource(undefined)).toBe("app");
   });
 });

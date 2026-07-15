@@ -18,6 +18,24 @@ export const MEMBERSHIP_DISCOUNT_TITLES = [
   LEGACY_MEMBERSHIP_DISCOUNT_TITLE,
 ] as const;
 
+/** Use app-owned `$app` metafields (auto-created) or existing merchant `custom.*` fields. */
+export const METAFIELD_SOURCES = ["app", "custom"] as const;
+export type MetafieldSource = (typeof METAFIELD_SOURCES)[number];
+
+/** Existing store metafields used when metafieldSource is "custom". */
+export const CUSTOM_PRODUCT_MEMBER_PRICE = {
+  namespace: "custom",
+  key: "member_price",
+} as const;
+export const CUSTOM_VARIANT_MEMBER_PRICE = {
+  namespace: "custom",
+  key: "variant_member_price",
+} as const;
+export const CUSTOM_CAMPAIGN = {
+  namespace: "custom",
+  key: "cross_rrp",
+} as const;
+
 export type MoneyValue = {
   amount: string;
   currencyCode: string;
@@ -28,6 +46,7 @@ export type MembershipConfig = {
   enabled: boolean;
   memberLabel: string;
   savingsLabel: string;
+  metafieldSource: MetafieldSource;
 };
 
 export const DEFAULT_MEMBERSHIP_CONFIG: MembershipConfig = {
@@ -35,7 +54,12 @@ export const DEFAULT_MEMBERSHIP_CONFIG: MembershipConfig = {
   enabled: true,
   memberLabel: "Member price",
   savingsLabel: "You save",
+  metafieldSource: "app",
 };
+
+export function parseMetafieldSource(value: unknown): MetafieldSource {
+  return value === "custom" ? "custom" : "app";
+}
 
 export function parseMoneyToCents(amount: string | number): number {
   const value = typeof amount === "number" ? amount : Number.parseFloat(amount);

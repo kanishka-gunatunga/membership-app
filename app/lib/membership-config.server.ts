@@ -2,6 +2,7 @@ import type { authenticate } from "../shopify.server";
 import {
   DEFAULT_MEMBERSHIP_CONFIG,
   MEMBERSHIP_CONFIG_METAOBJECT_TYPE,
+  parseMetafieldSource,
   type MembershipConfig,
 } from "./membership.shared";
 
@@ -21,6 +22,7 @@ const LOAD_CONFIG_QUERY = `#graphql
       enabled: field(key: "enabled") { value }
       memberLabel: field(key: "member_label") { value }
       savingsLabel: field(key: "savings_label") { value }
+      metafieldSource: field(key: "metafield_source") { value }
     }
   }
 `;
@@ -72,6 +74,7 @@ function parseConfig(node: Record<string, unknown> | null | undefined): Membersh
     memberLabel: readField("memberLabel") || DEFAULT_MEMBERSHIP_CONFIG.memberLabel,
     savingsLabel:
       readField("savingsLabel") || DEFAULT_MEMBERSHIP_CONFIG.savingsLabel,
+    metafieldSource: parseMetafieldSource(readField("metafieldSource")),
   };
 }
 
@@ -111,6 +114,7 @@ export async function saveMembershipConfig(
             { key: "enabled", value: String(config.enabled) },
             { key: "member_label", value: config.memberLabel },
             { key: "savings_label", value: config.savingsLabel },
+            { key: "metafield_source", value: config.metafieldSource },
           ],
         },
       },

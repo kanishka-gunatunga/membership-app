@@ -1,3 +1,8 @@
+import {
+  parseMetafieldSource,
+  type MetafieldSource,
+} from "./membership.shared";
+
 type AdminClient = {
   graphql: (
     query: string,
@@ -5,9 +10,21 @@ type AdminClient = {
   ) => Promise<Response>;
 };
 
-const PRODUCTS_WITH_MEMBER_PRICE_QUERY = `#graphql
-  query ProductsWithMemberPrice($first: Int!) {
+const PRODUCTS_WITH_APP_MEMBER_PRICE_QUERY = `#graphql
+  query ProductsWithAppMemberPrice($first: Int!) {
     products(first: $first, query: "metafields.$app.member_price:*") {
+      nodes {
+        id
+        title
+        handle
+      }
+    }
+  }
+`;
+
+const PRODUCTS_WITH_CUSTOM_MEMBER_PRICE_QUERY = `#graphql
+  query ProductsWithCustomMemberPrice($first: Int!) {
+    products(first: $first, query: "metafields.custom.member_price:*") {
       nodes {
         id
         title
@@ -25,9 +42,15 @@ export type MemberPriceCatalogStatus = {
 
 export async function getMemberPriceCatalogStatus(
   admin: AdminClient,
+  metafieldSource: MetafieldSource = "app",
 ): Promise<MemberPriceCatalogStatus> {
   try {
-    const response = await admin.graphql(PRODUCTS_WITH_MEMBER_PRICE_QUERY, {
+    const source = parseMetafieldSource(metafieldSource);
+    const query =
+      source === "custom"
+        ? PRODUCTS_WITH_CUSTOM_MEMBER_PRICE_QUERY
+        : PRODUCTS_WITH_APP_MEMBER_PRICE_QUERY;
+    const response = await admin.graphql(query, {
       variables: { first: 50 },
     });
     const json = await response.json();

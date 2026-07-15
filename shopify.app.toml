@@ -56,6 +56,10 @@ type = "single_line_text_field"
 name = "Savings label"
 type = "single_line_text_field"
 
+[metaobjects.app.membership_config.fields.metafield_source]
+name = "Metafield source"
+type = "single_line_text_field"
+
 [discount.metafields.app.membership_config]
 type = "json"
 name = "Membership function config"
