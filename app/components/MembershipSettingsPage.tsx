@@ -17,6 +17,7 @@ import {
   APP_BILLING_TRIAL_DAYS,
   APP_DISPLAY_NAME,
 } from "../lib/billing.shared";
+import { DEFAULT_MEMBERSHIP_CONFIG } from "../lib/membership.shared";
 import styles from "../styles/membership-settings.module.css";
 
 type LoaderConfig = {
@@ -57,6 +58,11 @@ type BillingStatus = {
   planName: string | null;
   status: string | null;
 };
+
+function readTextFieldValue(event: Event): string {
+  const target = event.currentTarget as HTMLElement & { value?: string };
+  return typeof target.value === "string" ? target.value : "";
+}
 
 function ensureOption(
   options: LinkableMetafieldOptions["productMoney"],
@@ -110,7 +116,6 @@ export default function MembershipSettingsPage() {
 
   const [enabled, setEnabled] = useState(config.enabled);
   const [memberLabel, setMemberLabel] = useState(config.memberLabel);
-  const [savingsLabel, setSavingsLabel] = useState(config.savingsLabel);
   const [metafieldSource, setMetafieldSource] = useState<MetafieldSource>(
     config.metafieldSource ?? "app",
   );
@@ -130,7 +135,6 @@ export default function MembershipSettingsPage() {
   useEffect(() => {
     setEnabled(config.enabled);
     setMemberLabel(config.memberLabel);
-    setSavingsLabel(config.savingsLabel);
     setMetafieldSource(config.metafieldSource ?? "app");
     setLinkedProductMemberPrice(config.linkedProductMemberPrice);
     setLinkedVariantMemberPrice(config.linkedVariantMemberPrice);
@@ -299,8 +303,27 @@ export default function MembershipSettingsPage() {
         </s-box>
       </s-section>
 
-      <s-section heading="Settings">
-        <Form method="post" id="membership-settings-form">
+        <s-section heading="Settings">
+        <Form
+          method="post"
+          id="membership-settings-form"
+          onSubmit={(event) => {
+            const form = event.currentTarget;
+            const field = form.querySelector("#member-label-field") as
+              | (HTMLElement & { value?: string })
+              | null;
+            const nextMemberLabel =
+              typeof field?.value === "string" ? field.value.trim() : "";
+
+            if (nextMemberLabel) {
+              setMemberLabel(nextMemberLabel);
+              const hidden = form.elements.namedItem(
+                "memberLabel",
+              ) as HTMLInputElement | null;
+              if (hidden) hidden.value = nextMemberLabel;
+            }
+          }}
+        >
           <input type="hidden" name="title" value={config.title} />
           <div className={styles.formStack}>
             <input type="hidden" name="enabled" value={enabled ? "on" : ""} />
@@ -503,28 +526,29 @@ export default function MembershipSettingsPage() {
               </div>
             ) : null}
 
-            <s-text-field
-              name="memberLabel"
-              label="Member price label"
-              value={memberLabel}
-              onChange={(event: Event) => {
-                const target = event.currentTarget as HTMLInputElement;
-                setMemberLabel(target.value);
-              }}
-              autocomplete="off"
-              details="Shown on product pages and collection cards"
+            {/*
+              Polaris s-text-field is not always included in FormData on submit.
+              Hidden inputs guarantee the current React state is what gets saved.
+            */}
+            <input type="hidden" name="memberLabel" value={memberLabel} />
+            <input
+              type="hidden"
+              name="savingsLabel"
+              value={DEFAULT_MEMBERSHIP_CONFIG.savingsLabel}
             />
 
             <s-text-field
-              name="savingsLabel"
-              label="Savings label"
-              value={savingsLabel}
+              id="member-label-field"
+              label="Member price label"
+              value={memberLabel}
+              onInput={(event: Event) => {
+                setMemberLabel(readTextFieldValue(event));
+              }}
               onChange={(event: Event) => {
-                const target = event.currentTarget as HTMLInputElement;
-                setSavingsLabel(target.value);
+                setMemberLabel(readTextFieldValue(event));
               }}
               autocomplete="off"
-              details='Shown on discounted cart lines, e.g. "You save $20"'
+              details="Shown on product pages and collection cards"
             />
 
             <s-button
