@@ -1,0 +1,24 @@
+/*
+  Embedded admin iframe: keep the document scrollable on small devices.
+  Horizontal overflow + height:100% traps are a common cause of "can't scroll".
+*/
+html,
+body {
+  height: auto !important;
+  min-height: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+  overflow-y: auto;
+  overscroll-behavior-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+body {
+  position: relative;
+}
+
+#root,
+[data-react-router-scroll-position] {
+  max-width: 100%;
+  min-width: 0;
+}

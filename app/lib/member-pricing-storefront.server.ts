@@ -1,7 +1,7 @@
 import {
   parseCampaignStrike,
-  parseMetafieldSource,
-  type MetafieldSource,
+  type MembershipConfig,
+  type MetafieldRef,
 } from "./membership.shared";
 
 type AdminClient = {
@@ -18,33 +18,31 @@ export type StorefrontProductPricing = {
 };
 
 const PRICES_BY_HANDLES_QUERY = `#graphql
-  query MemberPricingByHandles($query: String!) {
+  query MemberPricingByHandles(
+    $query: String!
+    $productNamespace: String!
+    $productKey: String!
+    $variantNamespace: String!
+    $variantKey: String!
+    $campaignNamespace: String!
+    $campaignKey: String!
+  ) {
     products(first: 50, query: $query) {
       nodes {
         handle
-        appCampaign: metafield(namespace: "$app", key: "campaign") {
+        campaign: metafield(namespace: $campaignNamespace, key: $campaignKey) {
           value
           jsonValue
         }
-        customCampaign: metafield(namespace: "custom", key: "cross_rrp") {
-          value
-          jsonValue
-        }
-        appMemberPrice: metafield(namespace: "$app", key: "member_price") {
-          jsonValue
-        }
-        customMemberPrice: metafield(namespace: "custom", key: "member_price") {
+        memberPrice: metafield(namespace: $productNamespace, key: $productKey) {
           jsonValue
         }
         variants(first: 1) {
           nodes {
             price
-            appMemberPrice: metafield(namespace: "$app", key: "member_price") {
-              jsonValue
-            }
-            customMemberPrice: metafield(
-              namespace: "custom"
-              key: "variant_member_price"
+            memberPrice: metafield(
+              namespace: $variantNamespace
+              key: $variantKey
             ) {
               jsonValue
             }
@@ -92,17 +90,45 @@ function buildHandleQuery(handles: string[]): string {
   return handles.map((handle) => `handle:${handle}`).join(" OR ");
 }
 
+function resolvePriceRefs(config: MembershipConfig): {
+  product: MetafieldRef;
+  variant: MetafieldRef;
+  campaign: MetafieldRef;
+} {
+  if (config.metafieldSource === "linked") {
+    return {
+      product: config.linkedMetafields.productMemberPrice,
+      variant: config.linkedMetafields.variantMemberPrice,
+      campaign: config.linkedMetafields.campaign,
+    };
+  }
+
+  return {
+    product: { namespace: "$app", key: "member_price" },
+    variant: { namespace: "$app", key: "member_price" },
+    campaign: { namespace: "$app", key: "campaign" },
+  };
+}
+
 export async function getStorefrontPricingByHandles(
   admin: AdminClient,
   handles: string[],
-  metafieldSource: MetafieldSource = "app",
+  config: MembershipConfig,
 ): Promise<Record<string, StorefrontProductPricing>> {
   const uniqueHandles = [...new Set(handles.map((h) => h.trim()).filter(Boolean))];
   if (uniqueHandles.length === 0) return {};
 
-  const source = parseMetafieldSource(metafieldSource);
+  const refs = resolvePriceRefs(config);
   const response = await admin.graphql(PRICES_BY_HANDLES_QUERY, {
-    variables: { query: buildHandleQuery(uniqueHandles) },
+    variables: {
+      query: buildHandleQuery(uniqueHandles),
+      productNamespace: refs.product.namespace,
+      productKey: refs.product.key,
+      variantNamespace: refs.variant.namespace,
+      variantKey: refs.variant.key,
+      campaignNamespace: refs.campaign.namespace,
+      campaignKey: refs.campaign.key,
+    },
   });
   const json = await response.json();
 
@@ -118,20 +144,14 @@ export async function getStorefrontPricingByHandles(
     if (!variant || !node.handle) continue;
 
     const variantMemberCents = parseMoneyMetafieldToCents(
-      source === "custom"
-        ? variant.customMemberPrice?.jsonValue
-        : variant.appMemberPrice?.jsonValue,
+      variant.memberPrice?.jsonValue,
     );
     const productMemberCents = parseMoneyMetafieldToCents(
-      source === "custom"
-        ? node.customMemberPrice?.jsonValue
-        : node.appMemberPrice?.jsonValue,
+      node.memberPrice?.jsonValue,
     );
     const memberCents =
       variantMemberCents > 0 ? variantMemberCents : productMemberCents;
-    const campaignStrike = parseCampaignStrike(
-      source === "custom" ? node.customCampaign : node.appCampaign,
-    );
+    const campaignStrike = parseCampaignStrike(node.campaign);
 
     const priceDecimal = Number(variant.price);
     const rrpCents = Math.round(priceDecimal * 100);

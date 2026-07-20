@@ -2,6 +2,9 @@ import type { authenticate } from "../shopify.server";
 import {
   DEFAULT_MEMBERSHIP_CONFIG,
   MEMBERSHIP_CONFIG_METAOBJECT_TYPE,
+  formatMetafieldHandle,
+  parseLinkedMetafields,
+  parseMetafieldHandle,
   parseMetafieldSource,
   type MembershipConfig,
 } from "./membership.shared";
@@ -23,6 +26,9 @@ const LOAD_CONFIG_QUERY = `#graphql
       memberLabel: field(key: "member_label") { value }
       savingsLabel: field(key: "savings_label") { value }
       metafieldSource: field(key: "metafield_source") { value }
+      linkedProductMemberPrice: field(key: "linked_product_member_price") { value }
+      linkedVariantMemberPrice: field(key: "linked_variant_member_price") { value }
+      linkedCampaign: field(key: "linked_campaign") { value }
     }
   }
 `;
@@ -68,6 +74,18 @@ function parseConfig(node: Record<string, unknown> | null | undefined): Membersh
   const readField = (key: string) =>
     (node[key] as { value?: string } | undefined)?.value;
 
+  const linkedMetafields = parseLinkedMetafields({
+    productMemberPrice:
+      parseMetafieldHandle(readField("linkedProductMemberPrice")) ??
+      DEFAULT_MEMBERSHIP_CONFIG.linkedMetafields.productMemberPrice,
+    variantMemberPrice:
+      parseMetafieldHandle(readField("linkedVariantMemberPrice")) ??
+      DEFAULT_MEMBERSHIP_CONFIG.linkedMetafields.variantMemberPrice,
+    campaign:
+      parseMetafieldHandle(readField("linkedCampaign")) ??
+      DEFAULT_MEMBERSHIP_CONFIG.linkedMetafields.campaign,
+  });
+
   return {
     title: readField("title") || DEFAULT_MEMBERSHIP_CONFIG.title,
     enabled: readField("enabled") !== "false",
@@ -75,6 +93,7 @@ function parseConfig(node: Record<string, unknown> | null | undefined): Membersh
     savingsLabel:
       readField("savingsLabel") || DEFAULT_MEMBERSHIP_CONFIG.savingsLabel,
     metafieldSource: parseMetafieldSource(readField("metafieldSource")),
+    linkedMetafields,
   };
 }
 
@@ -115,6 +134,22 @@ export async function saveMembershipConfig(
             { key: "member_label", value: config.memberLabel },
             { key: "savings_label", value: config.savingsLabel },
             { key: "metafield_source", value: config.metafieldSource },
+            {
+              key: "linked_product_member_price",
+              value: formatMetafieldHandle(
+                config.linkedMetafields.productMemberPrice,
+              ),
+            },
+            {
+              key: "linked_variant_member_price",
+              value: formatMetafieldHandle(
+                config.linkedMetafields.variantMemberPrice,
+              ),
+            },
+            {
+              key: "linked_campaign",
+              value: formatMetafieldHandle(config.linkedMetafields.campaign),
+            },
           ],
         },
       },

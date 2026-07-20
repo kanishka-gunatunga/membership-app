@@ -28,11 +28,7 @@ export async function memberPricingPricesLoader({ request }: LoaderFunctionArgs)
       .filter(Boolean) ?? [];
 
   const config = await loadMembershipConfigFromDiscount(admin);
-  const products = await getStorefrontPricingByHandles(
-    admin,
-    handles,
-    config.metafieldSource,
-  );
+  const products = await getStorefrontPricingByHandles(admin, handles, config);
 
   return Response.json(
     {

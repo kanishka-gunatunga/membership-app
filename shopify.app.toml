@@ -60,6 +60,18 @@ type = "single_line_text_field"
 name = "Metafield source"
 type = "single_line_text_field"
 
+[metaobjects.app.membership_config.fields.linked_product_member_price]
+name = "Linked product member price"
+type = "single_line_text_field"
+
+[metaobjects.app.membership_config.fields.linked_variant_member_price]
+name = "Linked variant member price"
+type = "single_line_text_field"
+
+[metaobjects.app.membership_config.fields.linked_campaign]
+name = "Linked campaign field"
+type = "single_line_text_field"
+
 [discount.metafields.app.membership_config]
 type = "json"
 name = "Membership function config"

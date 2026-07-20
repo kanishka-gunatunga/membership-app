@@ -5,6 +5,8 @@ import {
   MEMBERSHIP_DISCOUNT_METAFIELD_KEY,
   MEMBERSHIP_DISCOUNT_TITLE,
   MEMBERSHIP_DISCOUNT_TITLES,
+  functionMetafieldSource,
+  parseLinkedMetafields,
   parseMetafieldSource,
   type MembershipConfig,
 } from "./membership.shared";
@@ -103,7 +105,10 @@ function functionConfigJson(config: MembershipConfig): string {
     enabled: config.enabled,
     memberLabel: config.memberLabel,
     savingsLabel: config.savingsLabel,
-    metafieldSource: config.metafieldSource,
+    // Function dual-reads fixed `$app` + `custom.*` keys only.
+    metafieldSource: functionMetafieldSource(config),
+    linkedMetafields: config.linkedMetafields,
+    displaySource: config.metafieldSource,
   });
 }
 
@@ -333,7 +338,10 @@ export async function loadMembershipConfigFromDiscount(
         typeof record.savingsLabel === "string" && record.savingsLabel.trim()
           ? record.savingsLabel
           : DEFAULT_MEMBERSHIP_CONFIG.savingsLabel,
-      metafieldSource: parseMetafieldSource(record.metafieldSource),
+      metafieldSource: parseMetafieldSource(
+        record.displaySource ?? record.metafieldSource,
+      ),
+      linkedMetafields: parseLinkedMetafields(record.linkedMetafields),
     };
   }
 

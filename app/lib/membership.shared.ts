@@ -18,23 +18,35 @@ export const MEMBERSHIP_DISCOUNT_TITLES = [
   LEGACY_MEMBERSHIP_DISCOUNT_TITLE,
 ] as const;
 
-/** Use app-owned `$app` metafields (auto-created) or existing merchant `custom.*` fields. */
-export const METAFIELD_SOURCES = ["app", "custom"] as const;
+/** App-managed fields, or merchant-linked existing definitions. */
+export const METAFIELD_SOURCES = ["app", "linked"] as const;
 export type MetafieldSource = (typeof METAFIELD_SOURCES)[number];
 
-/** Existing store metafields used when metafieldSource is "custom". */
-export const CUSTOM_PRODUCT_MEMBER_PRICE = {
+export type MetafieldRef = {
+  namespace: string;
+  key: string;
+};
+
+export type LinkedMetafields = {
+  productMemberPrice: MetafieldRef;
+  variantMemberPrice: MetafieldRef;
+  campaign: MetafieldRef;
+};
+
+/** Built-in Function dual-read path for the common `custom.*` setup. */
+export const FUNCTION_CUSTOM_PRODUCT_MEMBER_PRICE: MetafieldRef = {
   namespace: "custom",
   key: "member_price",
-} as const;
-export const CUSTOM_VARIANT_MEMBER_PRICE = {
+};
+export const FUNCTION_CUSTOM_VARIANT_MEMBER_PRICE: MetafieldRef = {
   namespace: "custom",
   key: "variant_member_price",
-} as const;
-export const CUSTOM_CAMPAIGN = {
-  namespace: "custom",
-  key: "cross_rrp",
-} as const;
+};
+export const DEFAULT_LINKED_METAFIELDS: LinkedMetafields = {
+  productMemberPrice: { namespace: "custom", key: "member_price" },
+  variantMemberPrice: { namespace: "custom", key: "variant_member_price" },
+  campaign: { namespace: "custom", key: "cross_rrp" },
+};
 
 export type MoneyValue = {
   amount: string;
@@ -47,6 +59,7 @@ export type MembershipConfig = {
   memberLabel: string;
   savingsLabel: string;
   metafieldSource: MetafieldSource;
+  linkedMetafields: LinkedMetafields;
 };
 
 export const DEFAULT_MEMBERSHIP_CONFIG: MembershipConfig = {
@@ -55,10 +68,99 @@ export const DEFAULT_MEMBERSHIP_CONFIG: MembershipConfig = {
   memberLabel: "Member price",
   savingsLabel: "You save",
   metafieldSource: "app",
+  linkedMetafields: DEFAULT_LINKED_METAFIELDS,
 };
 
 export function parseMetafieldSource(value: unknown): MetafieldSource {
-  return value === "custom" ? "custom" : "app";
+  // "custom" kept for older saved configs
+  if (value === "linked" || value === "custom") return "linked";
+  return "app";
+}
+
+/** Parse `namespace.key` (splits on the first dot). */
+export function parseMetafieldHandle(value: unknown): MetafieldRef | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  const dot = trimmed.indexOf(".");
+  if (dot <= 0 || dot === trimmed.length - 1) return null;
+  const namespace = trimmed.slice(0, dot).trim();
+  const key = trimmed.slice(dot + 1).trim();
+  if (!namespace || !key) return null;
+  return { namespace, key };
+}
+
+export function formatMetafieldHandle(ref: MetafieldRef): string {
+  return `${ref.namespace}.${ref.key}`;
+}
+
+export function refsEqual(a: MetafieldRef, b: MetafieldRef): boolean {
+  return a.namespace === b.namespace && a.key === b.key;
+}
+
+export function parseLinkedMetafields(value: unknown): LinkedMetafields {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return DEFAULT_LINKED_METAFIELDS;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  const fromHandleOrParts = (
+    handleOrRef: unknown,
+    fallback: MetafieldRef,
+  ): MetafieldRef => {
+    if (typeof handleOrRef === "string") {
+      return parseMetafieldHandle(handleOrRef) ?? fallback;
+    }
+    if (handleOrRef && typeof handleOrRef === "object") {
+      const ref = handleOrRef as Record<string, unknown>;
+      if (typeof ref.namespace === "string" && typeof ref.key === "string") {
+        const namespace = ref.namespace.trim();
+        const key = ref.key.trim();
+        if (namespace && key) return { namespace, key };
+      }
+    }
+    return fallback;
+  };
+
+  return {
+    productMemberPrice: fromHandleOrParts(
+      record.productMemberPrice,
+      DEFAULT_LINKED_METAFIELDS.productMemberPrice,
+    ),
+    variantMemberPrice: fromHandleOrParts(
+      record.variantMemberPrice,
+      DEFAULT_LINKED_METAFIELDS.variantMemberPrice,
+    ),
+    campaign: fromHandleOrParts(
+      record.campaign,
+      DEFAULT_LINKED_METAFIELDS.campaign,
+    ),
+  };
+}
+
+/**
+ * Checkout Function can only dual-read fixed `custom.*` keys (query complexity).
+ * Other linked definitions are displayed live, but checkout uses app fields after sync.
+ */
+export function usesFunctionCustomPath(config: MembershipConfig): boolean {
+  if (config.metafieldSource !== "linked") return false;
+  return (
+    refsEqual(
+      config.linkedMetafields.productMemberPrice,
+      FUNCTION_CUSTOM_PRODUCT_MEMBER_PRICE,
+    ) &&
+    refsEqual(
+      config.linkedMetafields.variantMemberPrice,
+      FUNCTION_CUSTOM_VARIANT_MEMBER_PRICE,
+    )
+  );
+}
+
+/** Value stored on the discount metafield for the Function. */
+export function functionMetafieldSource(
+  config: MembershipConfig,
+): "app" | "custom" {
+  return usesFunctionCustomPath(config) ? "custom" : "app";
 }
 
 export function parseMoneyToCents(amount: string | number): number {

@@ -28,11 +28,26 @@
   if mp_config != blank and mp_config.metafield_source.value != blank
     assign mp_metafield_source = mp_config.metafield_source.value
   endif
-
   if mp_metafield_source == 'custom'
-    assign variant_member_metafield = mp_variant.metafields.custom.variant_member_price
-    assign product_member_metafield = mp_product.metafields.custom.member_price
-    assign campaign_metafield = mp_product.metafields.custom.cross_rrp
+    assign mp_metafield_source = 'linked'
+  endif
+
+  if mp_metafield_source == 'linked'
+    assign product_handle = mp_config.linked_product_member_price.value | default: 'custom.member_price'
+    assign variant_handle = mp_config.linked_variant_member_price.value | default: 'custom.variant_member_price'
+    assign campaign_handle = mp_config.linked_campaign.value | default: 'custom.cross_rrp'
+    assign product_parts = product_handle | split: '.'
+    assign variant_parts = variant_handle | split: '.'
+    assign campaign_parts = campaign_handle | split: '.'
+    assign product_ns = product_parts[0]
+    assign product_key = product_parts[1]
+    assign variant_ns = variant_parts[0]
+    assign variant_key = variant_parts[1]
+    assign campaign_ns = campaign_parts[0]
+    assign campaign_key = campaign_parts[1]
+    assign variant_member_metafield = mp_variant.metafields[variant_ns][variant_key]
+    assign product_member_metafield = mp_product.metafields[product_ns][product_key]
+    assign campaign_metafield = mp_product.metafields[campaign_ns][campaign_key]
   else
     assign variant_member_metafield = mp_variant.metafields['$app'].member_price
     assign product_member_metafield = mp_product.metafields['$app'].member_price
@@ -63,7 +78,6 @@
   endif
 
   assign savings_cents = rrp_cents | minus: member_cents
-  assign savings_total_cents = savings_cents | times: mp_quantity
   assign currency_code = cart.currency.iso_code | default: shop.currency
 -%}
 

@@ -9,16 +9,31 @@
   if mp_config != blank and mp_config.metafield_source.value != blank
     assign mp_metafield_source = mp_config.metafield_source.value
   endif
+  if mp_metafield_source == 'custom'
+    assign mp_metafield_source = 'linked'
+  endif
 
   assign current_variant = product.selected_or_first_available_variant
   assign rrp_cents = current_variant.price
   assign member_cents = 0
   assign member_metafield = blank
 
-  if mp_metafield_source == 'custom'
-    assign variant_member_metafield = current_variant.metafields.custom.variant_member_price
-    assign product_member_metafield = product.metafields.custom.member_price
-    assign campaign_metafield = product.metafields.custom.cross_rrp
+  if mp_metafield_source == 'linked'
+    assign product_handle = mp_config.linked_product_member_price.value | default: 'custom.member_price'
+    assign variant_handle = mp_config.linked_variant_member_price.value | default: 'custom.variant_member_price'
+    assign campaign_handle = mp_config.linked_campaign.value | default: 'custom.cross_rrp'
+    assign product_parts = product_handle | split: '.'
+    assign variant_parts = variant_handle | split: '.'
+    assign campaign_parts = campaign_handle | split: '.'
+    assign product_ns = product_parts[0]
+    assign product_key = product_parts[1]
+    assign variant_ns = variant_parts[0]
+    assign variant_key = variant_parts[1]
+    assign campaign_ns = campaign_parts[0]
+    assign campaign_key = campaign_parts[1]
+    assign variant_member_metafield = current_variant.metafields[variant_ns][variant_key]
+    assign product_member_metafield = product.metafields[product_ns][product_key]
+    assign campaign_metafield = product.metafields[campaign_ns][campaign_key]
   else
     assign variant_app_metafield = current_variant.metafields['$app'].member_price
     assign variant_dot_app_metafield = current_variant.metafields.app.member_price
@@ -105,9 +120,9 @@
       "variants": [
         {%- for variant in product.variants -%}
           {%- liquid
-            if mp_metafield_source == 'custom'
-              assign v_member_metafield = variant.metafields.custom.variant_member_price | default: product.metafields.custom.member_price
-              assign v_campaign = product.metafields.custom.cross_rrp.value
+            if mp_metafield_source == 'linked'
+              assign v_member_metafield = variant.metafields[variant_ns][variant_key] | default: product.metafields[product_ns][product_key]
+              assign v_campaign = product.metafields[campaign_ns][campaign_key].value
             else
               assign v_member_metafield = variant.metafields['$app'].member_price | default: product.metafields['$app'].member_price
               assign v_campaign = product.metafields['$app'].campaign.value

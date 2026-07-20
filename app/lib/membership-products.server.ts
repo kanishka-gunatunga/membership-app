@@ -1,7 +1,4 @@
-import {
-  parseMetafieldSource,
-  type MetafieldSource,
-} from "./membership.shared";
+import type { MembershipConfig, MetafieldRef } from "./membership.shared";
 
 type AdminClient = {
   graphql: (
@@ -10,21 +7,9 @@ type AdminClient = {
   ) => Promise<Response>;
 };
 
-const PRODUCTS_WITH_APP_MEMBER_PRICE_QUERY = `#graphql
-  query ProductsWithAppMemberPrice($first: Int!) {
-    products(first: $first, query: "metafields.$app.member_price:*") {
-      nodes {
-        id
-        title
-        handle
-      }
-    }
-  }
-`;
-
-const PRODUCTS_WITH_CUSTOM_MEMBER_PRICE_QUERY = `#graphql
-  query ProductsWithCustomMemberPrice($first: Int!) {
-    products(first: $first, query: "metafields.custom.member_price:*") {
+const PRODUCTS_WITH_MEMBER_PRICE_QUERY = `#graphql
+  query ProductsWithMemberPrice($first: Int!, $query: String!) {
+    products(first: $first, query: $query) {
       nodes {
         id
         title
@@ -40,18 +25,22 @@ export type MemberPriceCatalogStatus = {
   sampleProductHandle: string | null;
 };
 
+function productMemberPriceRef(config: MembershipConfig): MetafieldRef {
+  if (config.metafieldSource === "linked") {
+    return config.linkedMetafields.productMemberPrice;
+  }
+  return { namespace: "$app", key: "member_price" };
+}
+
 export async function getMemberPriceCatalogStatus(
   admin: AdminClient,
-  metafieldSource: MetafieldSource = "app",
+  config: MembershipConfig,
 ): Promise<MemberPriceCatalogStatus> {
   try {
-    const source = parseMetafieldSource(metafieldSource);
-    const query =
-      source === "custom"
-        ? PRODUCTS_WITH_CUSTOM_MEMBER_PRICE_QUERY
-        : PRODUCTS_WITH_APP_MEMBER_PRICE_QUERY;
-    const response = await admin.graphql(query, {
-      variables: { first: 50 },
+    const ref = productMemberPriceRef(config);
+    const searchQuery = `metafields.${ref.namespace}.${ref.key}:*`;
+    const response = await admin.graphql(PRODUCTS_WITH_MEMBER_PRICE_QUERY, {
+      variables: { first: 50, query: searchQuery },
     });
     const json = await response.json();
     const nodes = json.data?.products?.nodes ?? [];

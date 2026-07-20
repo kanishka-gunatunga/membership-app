@@ -12,11 +12,17 @@ import {
   syncMembershipDiscount,
 } from "../lib/membership-discount.server";
 import {
+  DEFAULT_LINKED_METAFIELDS,
   DEFAULT_MEMBERSHIP_CONFIG,
+  formatMetafieldHandle,
+  parseMetafieldHandle,
   parseMetafieldSource,
+  type MembershipConfig,
 } from "../lib/membership.shared";
 import { getThemeCardSetupGuide, getCardSnippetSource } from "../lib/theme-card-install.server";
 import { getMemberPriceCatalogStatus } from "../lib/membership-products.server";
+import { getLinkableMetafieldOptions } from "../lib/metafield-definitions.server";
+import { syncLinkedMetafieldsToApp } from "../lib/sync-linked-metafields.server";
 import {
   getThemeAppEmbedUrl,
   getThemeCollectionCardBlockUrl,
@@ -26,6 +32,49 @@ import {
   getThemesAdminUrl,
   loadMainTheme,
 } from "../lib/theme-admin-urls.server";
+
+function parseConfigFromForm(formData: FormData): MembershipConfig {
+  const metafieldSource = parseMetafieldSource(formData.get("metafieldSource"));
+
+  const productMemberPrice =
+    parseMetafieldHandle(formData.get("linkedProductMemberPrice")) ??
+    DEFAULT_LINKED_METAFIELDS.productMemberPrice;
+  const variantMemberPrice =
+    parseMetafieldHandle(formData.get("linkedVariantMemberPrice")) ??
+    DEFAULT_LINKED_METAFIELDS.variantMemberPrice;
+  const campaign =
+    parseMetafieldHandle(formData.get("linkedCampaign")) ??
+    DEFAULT_LINKED_METAFIELDS.campaign;
+
+  if (metafieldSource === "linked") {
+    if (
+      !formData.get("linkedProductMemberPrice") ||
+      !formData.get("linkedVariantMemberPrice") ||
+      !formData.get("linkedCampaign")
+    ) {
+      throw new Error(
+        "Select product member price, variant member price, and campaign fields before saving.",
+      );
+    }
+  }
+
+  return {
+    title: String(formData.get("title") || DEFAULT_MEMBERSHIP_CONFIG.title).trim(),
+    enabled: formData.get("enabled") === "on",
+    memberLabel:
+      String(formData.get("memberLabel") || "").trim() ||
+      DEFAULT_MEMBERSHIP_CONFIG.memberLabel,
+    savingsLabel:
+      String(formData.get("savingsLabel") || "").trim() ||
+      DEFAULT_MEMBERSHIP_CONFIG.savingsLabel,
+    metafieldSource,
+    linkedMetafields: {
+      productMemberPrice,
+      variantMemberPrice,
+      campaign,
+    },
+  };
+}
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
@@ -41,13 +90,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   }
 
   const config = await loadMembershipConfigFromDiscount(admin);
-  const [cardSetup, mainTheme, catalogStatus] = await Promise.all([
-    session.shop
-      ? getThemeCardSetupGuide(admin, session.shop)
-      : Promise.resolve(null),
-    loadMainTheme(admin),
-    getMemberPriceCatalogStatus(admin, config.metafieldSource),
-  ]);
+  const [cardSetup, mainTheme, catalogStatus, metafieldOptions] =
+    await Promise.all([
+      session.shop
+        ? getThemeCardSetupGuide(admin, session.shop)
+        : Promise.resolve(null),
+      loadMainTheme(admin),
+      getMemberPriceCatalogStatus(admin, config),
+      getLinkableMetafieldOptions(admin),
+    ]);
 
   const apiKey = process.env.SHOPIFY_API_KEY || "";
   const shop = session.shop;
@@ -78,7 +129,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const cardSnippetSource = getCardSnippetSource();
 
   return {
-    config,
+    config: {
+      ...config,
+      linkedProductMemberPrice: formatMetafieldHandle(
+        config.linkedMetafields.productMemberPrice,
+      ),
+      linkedVariantMemberPrice: formatMetafieldHandle(
+        config.linkedMetafields.variantMemberPrice,
+      ),
+      linkedCampaign: formatMetafieldHandle(config.linkedMetafields.campaign),
+    },
     discountActive,
     themeEditorUrl,
     cardBlockEditorUrl,
@@ -89,6 +149,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     cardSetup,
     catalogStatus,
     cardSnippetSource,
+    metafieldOptions,
   };
 };
 
@@ -96,21 +157,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
   const formData = await request.formData();
 
-  const config = {
-    title: String(formData.get("title") || DEFAULT_MEMBERSHIP_CONFIG.title).trim(),
-    enabled: formData.get("enabled") === "on",
-    memberLabel:
-      String(formData.get("memberLabel") || "").trim() ||
-      DEFAULT_MEMBERSHIP_CONFIG.memberLabel,
-    savingsLabel:
-      String(formData.get("savingsLabel") || "").trim() ||
-      DEFAULT_MEMBERSHIP_CONFIG.savingsLabel,
-    metafieldSource: parseMetafieldSource(formData.get("metafieldSource")),
-  };
-
   try {
+    const config = parseConfigFromForm(formData);
     const { discountId } = await syncMembershipDiscount(admin, config);
-    return { ok: true as const, discountId };
+    const { synced } = await syncLinkedMetafieldsToApp(admin, config);
+    return { ok: true as const, discountId, synced };
   } catch (error) {
     return {
       ok: false as const,

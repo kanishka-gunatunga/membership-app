@@ -1,201 +1,202 @@
-import { useEffect, useState } from "react";
-
-import { Form, useActionData, useLoaderData, useNavigation, useOutletContext } from "react-router";
-
+import { useEffect, useMemo, useState } from "react";
+import {
+  Form,
+  useActionData,
+  useLoaderData,
+  useNavigation,
+  useOutletContext,
+} from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 
-
-
-import type {
-  MembershipConfig,
-  MetafieldSource,
-} from "../lib/membership.shared";
-
+import type { MetafieldSource } from "../lib/membership.shared";
 import type { MemberPriceCatalogStatus } from "../lib/membership-products.server";
-
 import type { ThemeCardSetupGuide } from "../lib/theme-card-install.server";
-
+import type { LinkableMetafieldOptions } from "../lib/metafield-definitions.server";
 import {
   APP_BILLING_AMOUNT_USD,
   APP_BILLING_TRIAL_DAYS,
   APP_DISPLAY_NAME,
-  APP_TAGLINE,
 } from "../lib/billing.shared";
-
 import styles from "../styles/membership-settings.module.css";
 
-
+type LoaderConfig = {
+  title: string;
+  enabled: boolean;
+  memberLabel: string;
+  savingsLabel: string;
+  metafieldSource: MetafieldSource;
+  linkedProductMemberPrice: string;
+  linkedVariantMemberPrice: string;
+  linkedCampaign: string;
+};
 
 type LoaderData = {
-
-  config: MembershipConfig;
-
+  config: LoaderConfig;
   discountActive: boolean;
-
   themeEditorUrl: string | null;
-
   cardBlockEditorUrl: string | null;
-
   cartBlockEditorUrl: string | null;
-
   cardStylesEmbedUrl: string | null;
-
   themesAdminUrl: string | null;
-
   productsAdminUrl: string | null;
-
   cardSetup: ThemeCardSetupGuide | null;
-
   catalogStatus: MemberPriceCatalogStatus;
-
   cardSnippetSource: string;
-
+  metafieldOptions: LinkableMetafieldOptions;
 };
-
-
 
 type ActionData =
-
-  | { ok: true; discountId: string }
-
+  | { ok: true; discountId: string; synced?: number }
   | { ok: false; error: string }
-
   | undefined;
 
-
-
 type BillingStatus = {
-
   hasActivePayment: boolean;
-
   isTest: boolean;
-
   trialDays: number;
-
   planName: string | null;
-
   status: string | null;
-
 };
 
-
+function ensureOption(
+  options: LinkableMetafieldOptions["productMoney"],
+  handle: string,
+  ownerType: "PRODUCT" | "PRODUCTVARIANT",
+  type: string,
+) {
+  if (!handle || options.some((option) => option.handle === handle)) {
+    return options;
+  }
+  const dot = handle.indexOf(".");
+  return [
+    {
+      handle,
+      namespace: dot > 0 ? handle.slice(0, dot) : handle,
+      key: dot > 0 ? handle.slice(dot + 1) : "",
+      name: handle,
+      type,
+      ownerType,
+    },
+    ...options,
+  ];
+}
 
 export default function MembershipSettingsPage() {
-
   const {
-
     config: loaderConfig,
-
     discountActive: loaderDiscountActive,
-
     themeEditorUrl,
-
     cardBlockEditorUrl,
-
     cartBlockEditorUrl,
-
     cardStylesEmbedUrl,
-
     themesAdminUrl,
-
     productsAdminUrl,
-
     cardSetup,
-
     catalogStatus,
-
     cardSnippetSource,
-
+    metafieldOptions,
   } = useLoaderData<LoaderData>();
 
   const { billingStatus } = useOutletContext<{ billingStatus: BillingStatus }>();
-
   const actionData = useActionData<ActionData>();
-
   const navigation = useNavigation();
-
   const shopify = useAppBridge();
 
-
-
   const isSaving =
-
     navigation.state === "submitting" && navigation.formMethod === "POST";
 
-
-
   const config = loaderConfig;
-
   const discountActive = actionData?.ok ? true : loaderDiscountActive;
 
-
-
   const [enabled, setEnabled] = useState(config.enabled);
-
   const [memberLabel, setMemberLabel] = useState(config.memberLabel);
-
   const [savingsLabel, setSavingsLabel] = useState(config.savingsLabel);
-
   const [metafieldSource, setMetafieldSource] = useState<MetafieldSource>(
     config.metafieldSource ?? "app",
   );
-
+  const [linkedProductMemberPrice, setLinkedProductMemberPrice] = useState(
+    config.linkedProductMemberPrice,
+  );
+  const [linkedVariantMemberPrice, setLinkedVariantMemberPrice] = useState(
+    config.linkedVariantMemberPrice,
+  );
+  const [linkedCampaign, setLinkedCampaign] = useState(config.linkedCampaign);
+  const [useManualHandles, setUseManualHandles] = useState(false);
   const [copiedRenderLine, setCopiedRenderLine] = useState(false);
-
   const [copiedSnippetFile, setCopiedSnippetFile] = useState(false);
-
-
+  const [setupOpen, setSetupOpen] = useState(true);
+  const [legacyOpen, setLegacyOpen] = useState(false);
 
   useEffect(() => {
-
     setEnabled(config.enabled);
-
     setMemberLabel(config.memberLabel);
-
     setSavingsLabel(config.savingsLabel);
-
     setMetafieldSource(config.metafieldSource ?? "app");
-
-  }, [
-    config.enabled,
-    config.memberLabel,
-    config.savingsLabel,
-    config.metafieldSource,
-  ]);
-
-
+    setLinkedProductMemberPrice(config.linkedProductMemberPrice);
+    setLinkedVariantMemberPrice(config.linkedVariantMemberPrice);
+    setLinkedCampaign(config.linkedCampaign);
+  }, [config]);
 
   useEffect(() => {
-
     if (actionData?.ok) {
-
-      shopify.toast.show("Settings saved");
-
+      const synced = actionData.synced ?? 0;
+      shopify.toast.show(
+        synced > 0
+          ? `Settings saved · synced ${synced} field${synced === 1 ? "" : "s"} for checkout`
+          : "Settings saved",
+      );
     }
-
-  }, [actionData?.ok, shopify]);
-
-
-
-  useEffect(() => {
-
-    if (actionData && !actionData.ok) {
-
-      shopify.toast.show(actionData.error, { isError: true });
-
-    }
-
   }, [actionData, shopify]);
 
-
+  useEffect(() => {
+    if (actionData && !actionData.ok) {
+      shopify.toast.show(actionData.error, { isError: true });
+    }
+  }, [actionData, shopify]);
 
   const snippetLine =
-
     cardSetup?.snippetLine ??
-
     "{% render 'member-pricing-card', product: card_product %}";
 
+  const productMoneyOptions = useMemo(
+    () =>
+      ensureOption(
+        metafieldOptions.productMoney,
+        linkedProductMemberPrice,
+        "PRODUCT",
+        "money",
+      ),
+    [metafieldOptions.productMoney, linkedProductMemberPrice],
+  );
 
+  const variantMoneyOptions = useMemo(
+    () =>
+      ensureOption(
+        metafieldOptions.variantMoney,
+        linkedVariantMemberPrice,
+        "PRODUCTVARIANT",
+        "money",
+      ),
+    [metafieldOptions.variantMoney, linkedVariantMemberPrice],
+  );
+
+  const campaignOptions = useMemo(
+    () =>
+      ensureOption(
+        metafieldOptions.productBoolean,
+        linkedCampaign,
+        "PRODUCT",
+        "boolean",
+      ),
+    [metafieldOptions.productBoolean, linkedCampaign],
+  );
+
+  const setupCompleted = [
+    discountActive,
+    enabled,
+    catalogStatus.productsWithMemberPrice > 0,
+    Boolean(themeEditorUrl),
+  ].filter(Boolean).length;
 
   async function copyText(
     text: string,
@@ -214,719 +215,633 @@ export default function MembershipSettingsPage() {
     }
   }
 
-
-
-  const hasCatalogPrices = catalogStatus.productsWithMemberPrice > 0;
-
-
-
   return (
-
     <s-page heading={APP_DISPLAY_NAME}>
-
       <s-button
-
         slot="primary-action"
-
         variant="primary"
-
         type="submit"
-
         form="membership-settings-form"
-
         {...(isSaving ? { loading: true } : {})}
-
       >
-
         Save
-
       </s-button>
 
-
-
-      <div className={styles.page}>
-
-        <p className={styles.pageTagline}>{APP_TAGLINE}</p>
-
-        <s-section heading="Program">
-
-          <div className={styles.statusRow}>
-
-            <span
-
-              className={`${styles.badge} ${
-
-                discountActive ? styles.badgeActive : styles.badgeInactive
-
-              }`}
-
-            >
-
-              {discountActive ? "Checkout discount active" : "Discount not synced"}
-
-            </span>
-
-            <span
-
-              className={`${styles.badge} ${
-
-                enabled ? styles.badgeActive : styles.badgeInactive
-
-              }`}
-
-            >
-
-              {enabled ? "Pricing enabled" : "Pricing disabled"}
-
-            </span>
-
-          </div>
-
-          <p className={`${styles.hint} ${styles.hintTop}`}>
-
-            Logged-in customers get member prices at checkout. Open the app and
-            click <strong>Save</strong> if the checkout discount badge is not
-            active. Set member prices on products and variants, then enable
-            Campaign when you want RRP shown with a strikethrough.
-
-          </p>
-
-          {themeEditorUrl ? (
-
-            <s-stack direction="inline" gap="base">
-
-              <s-link href={themeEditorUrl} target="_blank">
-
-                Add product page block
-
-              </s-link>
-
-            </s-stack>
-
-          ) : null}
-
-        </s-section>
-
-
-
-        <s-section heading="Cart & checkout">
-
-          <p className={styles.hint}>
-
-            For logged-in customers, the automatic <strong>MemberPro</strong>{" "}
-
-            discount updates cart and checkout lines: strikethrough regular
-
-            price, member price, and savings text (from <strong>Savings label</strong>{" "}
-
-            in Settings — e.g. &quot;You save $20&quot;).
-
-          </p>
-
-          <p className={`${styles.hint} ${styles.hintTop}`}>
-
-            You do <strong>not</strong> need a cart snippet or cart block for
-
-            prices. Remove <code className={styles.inlineCodeInline}>member-pricing-cart-line</code>{" "}
-
-            from your theme cart line if you added it. Enable the{" "}
-
-            <strong>Card pricing styles</strong> app embed so the cart drawer
-
-            hides the duplicate TOTAL column price.
-
-          </p>
-
-          {cartBlockEditorUrl ? (
-            <s-stack direction="inline" gap="base">
-              <s-link href={cartBlockEditorUrl} target="_blank">
-                Open cart template
-              </s-link>
-            </s-stack>
-          ) : null}
-
-        </s-section>
-
-
-
-        <s-section heading="Product cards">
-
-          <div className={styles.statusRow}>
-
-            <span
-
-              className={`${styles.badge} ${
-
-                hasCatalogPrices ? styles.badgeActive : styles.badgeInactive
-
-              }`}
-
-            >
-
-              {hasCatalogPrices
-
-                ? `${catalogStatus.productsWithMemberPrice} product${
-
-                    catalogStatus.productsWithMemberPrice === 1 ? "" : "s"
-
-                  } with member prices`
-
-                : "No member prices on products yet"}
-
-            </span>
-
-          </div>
-
-
-
-          <p className={`${styles.hint} ${styles.hintTop}`}>
-
-            Cards show stacked <strong>RRP</strong> and <strong>Member</strong>{" "}
-
-            prices only when a product has a member price metafield lower than
-
-            its regular price. If you only see the normal theme price, set
-
-            member prices on products first.
-
-          </p>
-
-
-
-          {productsAdminUrl ? (
-
-            <p className={styles.metaLine}>
-
-              <s-link href={productsAdminUrl} target="_blank">
-
-                Open products
-
-              </s-link>
-
-              {" · "}
-
-              {metafieldSource === "custom"
-                ? "Edit a product → Metafields → your store’s member price fields"
-                : "Edit a product → Metafields → Member price"}
-
-            </p>
-
-          ) : null}
-
-
-
-          <h3 className={styles.methodHeading}>Recommended — app block</h3>
-
-          <p className={styles.hint}>
-
-            Works on Online Store 2.0 themes without editing theme code. The app
-
-            never modifies your theme files automatically.
-
-          </p>
-
-          <ol className={styles.steps}>
-
-            <li>
-
-              {cardBlockEditorUrl ? (
-
-                <s-link href={cardBlockEditorUrl} target="_blank">
-
-                  Open your collection page in the theme editor
-
-                </s-link>
-
-              ) : (
-
-                "Open your collection page in the theme editor"
-
-              )}
-
-              .
-
-            </li>
-
-            <li>
-
-              Click a <strong>product card</strong> in the preview, then{" "}
-
-              <strong>Add block</strong> → <strong>Member pricing (card)</strong>
-
-              . Place it where the price should appear (usually below the
-
-              title).
-
-            </li>
-
-            <li>
-
-              Remove or hide the theme&apos;s default price block on that card if
-
-              both prices show.
-
-            </li>
-
-            <li>
-              Enable the <strong>Card pricing styles</strong> app embed (loads CSS and
-              fetches member prices for product cards):{" "}
-              {cardStylesEmbedUrl ? (
-                <s-link href={cardStylesEmbedUrl} target="_blank">
-                  Theme settings → App embeds → Card pricing styles
-                </s-link>
-              ) : (
-                "Theme settings → App embeds → Card pricing styles"
-              )}
-            </li>
-
-            <li>Save the theme and refresh a collection page.</li>
-
-          </ol>
-
-
-
-          <h3 className={styles.methodHeading}>
-
-            Legacy themes (Dawn and snippet-based cards)
-
-          </h3>
-
-          <p className={`${styles.hint} ${styles.hintTop} ${styles.hintBottom}`}>
-
-            For Dawn and similar themes, the snippet in card-product.liquid
-
-            is the right approach. The snippet alone cannot read app metafields
-
-            from theme code, so it shows a regular price first, then the{" "}
-
-            <strong>Card pricing styles</strong> app embed loads member prices from
-
-            the app (via <code className={styles.inlineCodeInline}>/apps/membership-pricing/prices</code>
-
-            ). You need <strong>both</strong>: the snippet in the theme + the app
-
-            embed enabled + the app deployed.
-
-          </p>
-
-          {cardSetup?.canReadTheme ? (
-
-            <div className={styles.statusRow}>
-
-              <span
-
-                className={`${styles.badge} ${
-
-                  cardSetup.snippetFilePresent
-
-                    ? styles.badgeActive
-
-                    : styles.badgeInactive
-
-                }`}
-
-              >
-
-                {cardSetup.snippetFilePresent
-
-                  ? "Snippet file in theme"
-
-                  : "Snippet file missing"}
-
-              </span>
-
-              <span
-
-                className={`${styles.badge} ${
-
-                  cardSetup.renderCallPresent
-
-                    ? styles.badgeActive
-
-                    : styles.badgeInactive
-
-                }`}
-
-              >
-
-                {cardSetup.renderCallPresent
-
-                  ? "card-product.liquid updated"
-
-                  : "card-product.liquid not updated"}
-
-              </span>
-
+      <s-section padding="base">
+        <s-stack gap="small-200">
+          <s-heading>Membership overview</s-heading>
+          <s-paragraph color="subdued">
+            Member prices on your storefront, automatic discounts at checkout
+            for logged-in customers.
+          </s-paragraph>
+        </s-stack>
+
+        <s-box paddingBlockStart="base">
+          <div className={styles.metricsContainer}>
+            <div className={styles.metricsGrid}>
+              <div className={styles.metricCard}>
+                <s-stack gap="small-200">
+                  <s-text color="subdued">Checkout</s-text>
+                  <span className={styles.metricValue}>
+                    {discountActive ? "Ready" : "Needs sync"}
+                  </span>
+                  <s-badge tone={discountActive ? "success" : "warning"}>
+                    {discountActive ? "Discount active" : "Save to sync"}
+                  </s-badge>
+                </s-stack>
+              </div>
+
+              <div className={styles.metricCard}>
+                <s-stack gap="small-200">
+                  <s-text color="subdued">Program</s-text>
+                  <span className={styles.metricValue}>
+                    {enabled ? "On" : "Off"}
+                  </span>
+                  <s-badge tone={enabled ? "success" : "neutral"}>
+                    {enabled ? "Pricing enabled" : "Pricing disabled"}
+                  </s-badge>
+                </s-stack>
+              </div>
+
+              <div className={styles.metricCard}>
+                <s-stack gap="small-200">
+                  <s-text color="subdued">Catalog</s-text>
+                  <span className={styles.metricValue}>
+                    {catalogStatus.productsWithMemberPrice}
+                  </span>
+                  <s-badge
+                    tone={
+                      catalogStatus.productsWithMemberPrice > 0
+                        ? "success"
+                        : "neutral"
+                    }
+                  >
+                    Products with member price
+                  </s-badge>
+                </s-stack>
+              </div>
+
+              <div className={styles.metricCard}>
+                <s-stack gap="small-200">
+                  <s-text color="subdued">Data source</s-text>
+                  <span className={styles.metricValue}>
+                    {metafieldSource === "linked" ? "Linked" : "App"}
+                  </span>
+                  <s-badge>
+                    {metafieldSource === "linked"
+                      ? "Existing fields"
+                      : "MemberPro fields"}
+                  </s-badge>
+                </s-stack>
+              </div>
             </div>
+          </div>
+        </s-box>
+      </s-section>
 
+      <s-section heading="Settings">
+        <Form method="post" id="membership-settings-form">
+          <input type="hidden" name="title" value={config.title} />
+          <div className={styles.formStack}>
+            <input type="hidden" name="enabled" value={enabled ? "on" : ""} />
+            <s-checkbox
+              label="Enable member pricing"
+              checked={enabled}
+              onChange={(event: Event) => {
+                const target = event.currentTarget as HTMLInputElement & {
+                  checked?: boolean;
+                };
+                setEnabled(Boolean(target.checked));
+              }}
+            />
+
+            <input type="hidden" name="metafieldSource" value={metafieldSource} />
+            <s-choice-list
+              label="Price data source"
+              onChange={(event: Event) => {
+                const target = event.currentTarget as HTMLElement & {
+                  values?: string[];
+                };
+                const next = target.values?.[0];
+                if (next === "app" || next === "linked") {
+                  setMetafieldSource(next);
+                }
+              }}
+            >
+              <s-choice value="app" selected={metafieldSource === "app"}>
+                Managed by MemberPro — recommended for most stores. Uses
+                MemberPro Member price and Campaign fields.
+              </s-choice>
+              <s-choice value="linked" selected={metafieldSource === "linked"}>
+                Connect existing store fields — choose which metafield
+                definitions already in your store to use.
+              </s-choice>
+            </s-choice-list>
+
+            {metafieldSource === "linked" ? (
+              <div className={styles.connectPanel}>
+                <s-stack gap="base">
+                  <s-heading>Connect metafields</s-heading>
+                  <s-banner tone="info" heading="Field requirements">
+                    <s-unordered-list>
+                      <s-list-item>
+                        Product member price — type <strong>Money</strong>
+                      </s-list-item>
+                      <s-list-item>
+                        Variant member price — type <strong>Money</strong>
+                      </s-list-item>
+                      <s-list-item>
+                        Campaign / RRP strike — type{" "}
+                        <strong>True or false</strong>
+                      </s-list-item>
+                      <s-list-item>
+                        Definitions must be storefront-visible
+                      </s-list-item>
+                    </s-unordered-list>
+                  </s-banner>
+
+                  {productMoneyOptions.length === 0 &&
+                    variantMoneyOptions.length === 0 ? (
+                    <s-paragraph color="subdued">
+                      No matching metafield definitions found. Create Money /
+                      Boolean metafields in Settings → Custom data, or enter
+                      handles manually.
+                    </s-paragraph>
+                  ) : null}
+
+                  <s-checkbox
+                    label="Enter metafield handles manually"
+                    checked={useManualHandles}
+                    onChange={(event: Event) => {
+                      const target = event.currentTarget as HTMLInputElement & {
+                        checked?: boolean;
+                      };
+                      setUseManualHandles(Boolean(target.checked));
+                    }}
+                  />
+
+                  <div className={styles.connectFields}>
+                    <div className={styles.fieldBlock}>
+                      <s-text type="strong">Product member price</s-text>
+                      {useManualHandles ? (
+                        <input
+                          className={styles.nativeInput}
+                          name="linkedProductMemberPrice"
+                          value={linkedProductMemberPrice}
+                          onChange={(event) =>
+                            setLinkedProductMemberPrice(event.currentTarget.value)
+                          }
+                          placeholder="custom.member_price"
+                          required
+                        />
+                      ) : (
+                        <select
+                          className={styles.nativeSelect}
+                          name="linkedProductMemberPrice"
+                          value={linkedProductMemberPrice}
+                          onChange={(event) =>
+                            setLinkedProductMemberPrice(event.currentTarget.value)
+                          }
+                          required
+                        >
+                          <option value="">Select a Money metafield…</option>
+                          {productMoneyOptions.map((option) => (
+                            <option key={option.handle} value={option.handle}>
+                              {option.handle}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      <p className={styles.fieldHelp}>
+                        namespace.key · Money type
+                        {linkedProductMemberPrice
+                          ? ` · selected: ${linkedProductMemberPrice}`
+                          : ""}
+                      </p>
+                    </div>
+
+                    <div className={styles.fieldBlock}>
+                      <s-text type="strong">Variant member price</s-text>
+                      {useManualHandles ? (
+                        <input
+                          className={styles.nativeInput}
+                          name="linkedVariantMemberPrice"
+                          value={linkedVariantMemberPrice}
+                          onChange={(event) =>
+                            setLinkedVariantMemberPrice(event.currentTarget.value)
+                          }
+                          placeholder="custom.variant_member_price"
+                          required
+                        />
+                      ) : (
+                        <select
+                          className={styles.nativeSelect}
+                          name="linkedVariantMemberPrice"
+                          value={linkedVariantMemberPrice}
+                          onChange={(event) =>
+                            setLinkedVariantMemberPrice(event.currentTarget.value)
+                          }
+                          required
+                        >
+                          <option value="">Select a Money metafield…</option>
+                          {variantMoneyOptions.map((option) => (
+                            <option key={option.handle} value={option.handle}>
+                              {option.handle}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      <p className={styles.fieldHelp}>
+                        Overrides product member price when set
+                      </p>
+                    </div>
+
+                    <div className={styles.fieldBlock}>
+                      <s-text type="strong">Campaign (RRP strikethrough)</s-text>
+                      {useManualHandles ? (
+                        <input
+                          className={styles.nativeInput}
+                          name="linkedCampaign"
+                          value={linkedCampaign}
+                          onChange={(event) =>
+                            setLinkedCampaign(event.currentTarget.value)
+                          }
+                          placeholder="custom.cross_rrp"
+                          required
+                        />
+                      ) : (
+                        <select
+                          className={styles.nativeSelect}
+                          name="linkedCampaign"
+                          value={linkedCampaign}
+                          onChange={(event) =>
+                            setLinkedCampaign(event.currentTarget.value)
+                          }
+                          required
+                        >
+                          <option value="">Select a True/false metafield…</option>
+                          {campaignOptions.map((option) => (
+                            <option key={option.handle} value={option.handle}>
+                              {option.handle}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      <p className={styles.fieldHelp}>
+                        True/false · when true, RRP is struck through
+                      </p>
+                    </div>
+                  </div>
+
+                  <s-paragraph color="subdued">
+                    Saving connects these fields for storefront pricing. If they
+                    use a namespace other than the common custom path, MemberPro
+                    also syncs values into app fields so checkout discounts keep
+                    working.
+                  </s-paragraph>
+                </s-stack>
+              </div>
+            ) : null}
+
+            <s-text-field
+              name="memberLabel"
+              label="Member price label"
+              value={memberLabel}
+              onChange={(event: Event) => {
+                const target = event.currentTarget as HTMLInputElement;
+                setMemberLabel(target.value);
+              }}
+              autocomplete="off"
+              details="Shown on product pages and collection cards"
+            />
+
+            <s-text-field
+              name="savingsLabel"
+              label="Savings label"
+              value={savingsLabel}
+              onChange={(event: Event) => {
+                const target = event.currentTarget as HTMLInputElement;
+                setSavingsLabel(target.value);
+              }}
+              autocomplete="off"
+              details='Shown on discounted cart lines, e.g. "You save $20"'
+            />
+
+            <s-button
+              type="submit"
+              variant="primary"
+              {...(isSaving ? { loading: true } : {})}
+            >
+              Save settings
+            </s-button>
+          </div>
+        </Form>
+      </s-section>
+
+      <s-section>
+        <s-stack gap="base">
+          <div className={styles.sectionHeader}>
+            <s-stack gap="small-200">
+              <s-heading>Setup guide</s-heading>
+              <s-paragraph color="subdued">
+                {setupCompleted} of 4 checklist signals look ready. Finish the
+                steps below to go live.
+              </s-paragraph>
+            </s-stack>
+            <s-button
+              variant="tertiary"
+              tone="neutral"
+              icon={setupOpen ? "chevron-up" : "chevron-down"}
+              accessibilityLabel="Toggle setup guide"
+              onClick={() => setSetupOpen((open) => !open)}
+            />
+          </div>
+
+          {setupOpen ? (
+            <s-box border="base" borderRadius="base" background="base">
+              <s-stack gap="none">
+                <s-box padding="base">
+                  <div className={styles.stepRow}>
+                    <span className={styles.stepNumber}>1</span>
+                    <div className={styles.stepBody}>
+                      <div className={styles.stepHeader}>
+                        <s-heading>Save member pricing settings</s-heading>
+                        <s-badge
+                          tone={
+                            enabled && discountActive ? "success" : "warning"
+                          }
+                        >
+                          {enabled && discountActive ? "Done" : "Action needed"}
+                        </s-badge>
+                      </div>
+                      <s-paragraph color="subdued">
+                        Enable the program and choose MemberPro-managed fields
+                        or connect your existing metafields.
+                      </s-paragraph>
+                    </div>
+                  </div>
+                </s-box>
+
+                <s-divider />
+
+                <s-box padding="base">
+                  <div className={styles.stepRow}>
+                    <span className={styles.stepNumber}>2</span>
+                    <div className={styles.stepBody}>
+                      <div className={styles.stepHeader}>
+                        <s-heading>Add the product page block</s-heading>
+                        <s-badge>Theme</s-badge>
+                      </div>
+                      <s-paragraph color="subdued">
+                        Place MemberPro pricing where the price should appear on
+                        the product template.
+                      </s-paragraph>
+                      {themeEditorUrl ? (
+                        <s-link href={themeEditorUrl} target="_blank">
+                          Open theme editor
+                        </s-link>
+                      ) : null}
+                    </div>
+                  </div>
+                </s-box>
+
+                <s-divider />
+
+                <s-box padding="base">
+                  <div className={styles.stepRow}>
+                    <span className={styles.stepNumber}>3</span>
+                    <div className={styles.stepBody}>
+                      <div className={styles.stepHeader}>
+                        <s-heading>Show prices on collection cards</s-heading>
+                        <s-badge>Theme</s-badge>
+                      </div>
+                      <s-paragraph color="subdued">
+                        Add the card block, then enable Card pricing styles in
+                        app embeds.
+                      </s-paragraph>
+                      <div className={styles.linkRow}>
+                        {cardBlockEditorUrl ? (
+                          <s-link href={cardBlockEditorUrl} target="_blank">
+                            Add card block
+                          </s-link>
+                        ) : null}
+                        {cardStylesEmbedUrl ? (
+                          <s-link href={cardStylesEmbedUrl} target="_blank">
+                            App embeds
+                          </s-link>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                </s-box>
+
+                <s-divider />
+
+                <s-box padding="base">
+                  <div className={styles.stepRow}>
+                    <span className={styles.stepNumber}>4</span>
+                    <div className={styles.stepBody}>
+                      <div className={styles.stepHeader}>
+                        <s-heading>Set member prices on products</s-heading>
+                        <s-badge
+                          tone={
+                            catalogStatus.productsWithMemberPrice > 0
+                              ? "success"
+                              : "warning"
+                          }
+                        >
+                          {catalogStatus.productsWithMemberPrice > 0
+                            ? `${catalogStatus.productsWithMemberPrice} priced`
+                            : "No prices yet"}
+                        </s-badge>
+                      </div>
+                      <s-paragraph color="subdued">
+                        {metafieldSource === "linked"
+                          ? "Edit prices in the metafields you connected above."
+                          : "Set Member price on products/variants. Enable Campaign for RRP strike."}
+                      </s-paragraph>
+                      {productsAdminUrl ? (
+                        <s-link href={productsAdminUrl} target="_blank">
+                          Open products
+                        </s-link>
+                      ) : null}
+                    </div>
+                  </div>
+                </s-box>
+              </s-stack>
+            </s-box>
           ) : null}
 
-
-
-          <ol className={styles.steps}>
-
-            <li>
-
-              In Shopify admin go to{" "}
-
-              {themesAdminUrl ? (
-
-                <s-link href={themesAdminUrl} target="_blank">
-
-                  Online Store → Themes
-
-                </s-link>
-
-              ) : (
-
-                "Online Store → Themes"
-
-              )}
-
-              , click <strong>⋯</strong> on your live theme →{" "}
-
-              <strong>Edit code</strong>.
-
-            </li>
-
-            <li>
-
-              Under <strong>Snippets</strong>, add{" "}
-
-              <strong>member-pricing-card.liquid</strong> and paste the snippet
-
-              file below, then save.
-
-              <div className={styles.actionRow}>
-
+          <s-box border="base" borderRadius="base" background="base">
+            <s-box padding="base">
+              <div className={styles.sectionHeader}>
+                <s-stack gap="small-100">
+                  <s-heading>Legacy Dawn / snippet setup</s-heading>
+                  <s-paragraph color="subdued">
+                    Only for older themes that can’t use the card app block.
+                  </s-paragraph>
+                </s-stack>
                 <s-button
-
-                  type="button"
-
-                  onClick={() =>
-
-                    copyText(
-                      cardSnippetSource,
-                      setCopiedSnippetFile,
-                      "Snippet file",
-                    )
-
-                  }
-
-                >
-
-                  {copiedSnippetFile ? "Copied" : "Copy snippet file"}
-
-                </s-button>
-
-              </div>
-
-            </li>
-
-            <li>
-
-              Open{" "}
-
-              <strong>{cardSetup?.filename ?? "snippets/card-product.liquid"}</strong>
-
-              {cardSetup?.themeCodeEditorUrl ? (
-
-                <>
-
-                  {" "}
-
-                  (
-
-                  <s-link href={cardSetup.themeCodeEditorUrl} target="_blank">
-
-                    direct link
-
-                  </s-link>
-
-                  )
-
-                </>
-
-              ) : null}
-
-              . <strong>Replace</strong> the default{" "}
-
-              <code className={styles.inlineCodeInline}>
-
-                {"{% render 'price' %}"}
-
-              </code>{" "}
-
-              line with:
-
-              <pre className={styles.codeBlock}>{snippetLine}</pre>
-
-              <div className={styles.actionRow}>
-
-                <s-button
-
-                  type="button"
-
-                  onClick={() =>
-
-                    copyText(snippetLine, setCopiedRenderLine, "Render line")
-
-                  }
-
-                >
-
-                  {copiedRenderLine ? "Copied" : "Copy render line"}
-
-                </s-button>
-
-              </div>
-
-            </li>
-
-            <li>
-
-              Enable the <strong>Card pricing styles</strong> app embed (same as
-
-              above).
-
-            </li>
-
-          </ol>
-
-
-
-          <p className={`${styles.hint} ${styles.hintTop}`}>
-
-            This app only reads your theme to show setup status. It does not push
-
-            or change theme files on your store unless you edit the theme
-
-            yourself.
-
-          </p>
-
-        </s-section>
-
-
-
-        <s-section heading="Settings">
-
-          <Form method="post" id="membership-settings-form">
-
-            <input type="hidden" name="title" value={config.title} />
-
-            <p className={`${styles.hint} ${styles.hintBottom}`}>
-              Control whether member pricing is active and customize the text
-              shoppers see on your storefront and at checkout.
-            </p>
-
-            <div className={styles.fieldStack}>
-
-              <label className={styles.toggleRow}>
-
-                <input
-
-                  name="enabled"
-
-                  type="checkbox"
-
-                  checked={enabled}
-
-                  onChange={(event) => setEnabled(event.currentTarget.checked)}
-
+                  variant="tertiary"
+                  tone="neutral"
+                  icon={legacyOpen ? "chevron-up" : "chevron-down"}
+                  accessibilityLabel="Toggle legacy setup"
+                  onClick={() => setLegacyOpen((open) => !open)}
                 />
+              </div>
+            </s-box>
 
-                <span className={styles.toggleLabel}>
+            {legacyOpen ? (
+              <>
+                <s-divider />
+                <s-box padding="base">
+                  <s-stack gap="base">
+                    {cardSetup?.canReadTheme ? (
+                      <s-stack direction="inline" gap="small">
+                        <s-badge
+                          tone={
+                            cardSetup.snippetFilePresent ? "success" : "warning"
+                          }
+                        >
+                          {cardSetup.snippetFilePresent
+                            ? "Snippet present"
+                            : "Snippet missing"}
+                        </s-badge>
+                        <s-badge
+                          tone={
+                            cardSetup.renderCallPresent ? "success" : "warning"
+                          }
+                        >
+                          {cardSetup.renderCallPresent
+                            ? "card-product updated"
+                            : "card-product not updated"}
+                        </s-badge>
+                      </s-stack>
+                    ) : null}
 
-                  Enable member pricing
+                    <s-ordered-list>
+                      <s-list-item>
+                        In{" "}
+                        {themesAdminUrl ? (
+                          <s-link href={themesAdminUrl} target="_blank">
+                            Online Store → Themes
+                          </s-link>
+                        ) : (
+                          "Online Store → Themes"
+                        )}
+                        , open Edit code.
+                      </s-list-item>
+                      <s-list-item>
+                        Add member-pricing-card.liquid under Snippets.
+                        <s-box paddingBlockStart="small-200">
+                          <s-button
+                            type="button"
+                            onClick={() =>
+                              copyText(
+                                cardSnippetSource,
+                                setCopiedSnippetFile,
+                                "Snippet file",
+                              )
+                            }
+                          >
+                            {copiedSnippetFile ? "Copied" : "Copy snippet file"}
+                          </s-button>
+                        </s-box>
+                      </s-list-item>
+                      <s-list-item>
+                        In{" "}
+                        {cardSetup?.filename ?? "snippets/card-product.liquid"},
+                        replace{" "}
+                        <code className={styles.inlineCode}>
+                          {"{% render 'price' %}"}
+                        </code>{" "}
+                        with:
+                        <pre className={styles.codeBlock}>{snippetLine}</pre>
+                        <s-box paddingBlockStart="small-200">
+                          <s-button
+                            type="button"
+                            onClick={() =>
+                              copyText(
+                                snippetLine,
+                                setCopiedRenderLine,
+                                "Render line",
+                              )
+                            }
+                          >
+                            {copiedRenderLine ? "Copied" : "Copy render line"}
+                          </s-button>
+                        </s-box>
+                      </s-list-item>
+                      <s-list-item>
+                        Enable Card pricing styles
+                        {cardStylesEmbedUrl ? (
+                          <>
+                            {" "}
+                            (
+                            <s-link href={cardStylesEmbedUrl} target="_blank">
+                              open embeds
+                            </s-link>
+                            )
+                          </>
+                        ) : null}
+                        .
+                      </s-list-item>
+                    </s-ordered-list>
 
-                </span>
-
-              </label>
-
-              <fieldset className={styles.choiceGroup}>
-                <legend className={styles.choiceLegend}>
-                  Price data source
-                </legend>
-                <p className={styles.hint}>
-                  Choose how MemberPro should read member prices and campaign
-                  flags for this shop.
-                </p>
-                <label
-                  className={`${styles.choiceOption} ${
-                    metafieldSource === "app" ? styles.choiceOptionSelected : ""
-                  }`}
-                >
-                  <input
-                    name="metafieldSource"
-                    type="radio"
-                    value="app"
-                    checked={metafieldSource === "app"}
-                    onChange={() => setMetafieldSource("app")}
-                  />
-                  <span className={styles.choiceCopy}>
-                    <span className={styles.choiceTitle}>
-                      Managed by MemberPro
-                    </span>
-                    <span className={styles.choiceDescription}>
-                      Recommended for most stores. The app provides Member price
-                      and Campaign fields on products and variants.
-                    </span>
-                  </span>
-                </label>
-                <label
-                  className={`${styles.choiceOption} ${
-                    metafieldSource === "custom"
-                      ? styles.choiceOptionSelected
-                      : ""
-                  }`}
-                >
-                  <input
-                    name="metafieldSource"
-                    type="radio"
-                    value="custom"
-                    checked={metafieldSource === "custom"}
-                    onChange={() => setMetafieldSource("custom")}
-                  />
-                  <span className={styles.choiceCopy}>
-                    <span className={styles.choiceTitle}>
-                      Use existing store fields
-                    </span>
-                    <span className={styles.choiceDescription}>
-                      For stores that already maintain member prices. Connects
-                      to your current product and variant price fields so you
-                      don’t need to re-enter data.
-                    </span>
-                  </span>
-                </label>
-              </fieldset>
-
-
-
-              <s-text-field
-
-                name="memberLabel"
-
-                label="Member price label"
-
-                value={memberLabel}
-
-                onChange={(event) => setMemberLabel(event.currentTarget.value)}
-
-                autocomplete="off"
-
-                details="Shown on product pages and collection cards"
-
-              />
-
-
-
-              <s-text-field
-
-                name="savingsLabel"
-
-                label="Savings label"
-
-                value={savingsLabel}
-
-                onChange={(event) => setSavingsLabel(event.currentTarget.value)}
-
-                autocomplete="off"
-
-                details="Shown on discounted cart lines at checkout"
-
-              />
-
-
-
-              <s-button
-
-                type="submit"
-
-                variant="primary"
-
-                {...(isSaving ? { loading: true } : {})}
-
-              >
-
-                Save
-
-              </s-button>
-
-            </div>
-
-          </Form>
-
-        </s-section>
-
-      </div>
-
-
-
-      <s-section slot="aside" heading="Plan">
-
-        <p className={styles.hint}>
-
-          <strong>${APP_BILLING_AMOUNT_USD}/month</strong> after a{" "}
-
-          <strong>{APP_BILLING_TRIAL_DAYS}-day free trial</strong>.
-
-        </p>
-
-        {billingStatus.hasActivePayment && billingStatus.planName ? (
-          <p className={styles.metaLine}>
-            Current plan: {billingStatus.planName}
-          </p>
-        ) : null}
-
+                    {cartBlockEditorUrl ? (
+                      <s-paragraph color="subdued">
+                        Cart discounts are automatic. Optional:{" "}
+                        <s-link href={cartBlockEditorUrl} target="_blank">
+                          open cart template
+                        </s-link>
+                        .
+                      </s-paragraph>
+                    ) : null}
+                  </s-stack>
+                </s-box>
+              </>
+            ) : null}
+          </s-box>
+        </s-stack>
       </s-section>
 
+      <s-section heading="Plan & details">
+        <div className={styles.infoGrid}>
+          <s-box padding="base" border="base" borderRadius="base" background="base">
+            <s-stack gap="small">
+              <s-heading>Plan</s-heading>
+              <s-paragraph>
+                <s-text type="strong">${APP_BILLING_AMOUNT_USD}/month</s-text>{" "}
+                after a {APP_BILLING_TRIAL_DAYS}-day free trial.
+              </s-paragraph>
+              {billingStatus.hasActivePayment && billingStatus.planName ? (
+                <s-paragraph color="subdued">
+                  Current plan: {billingStatus.planName}
+                </s-paragraph>
+              ) : null}
+            </s-stack>
+          </s-box>
 
-
-      <s-section slot="aside" heading="How it works">
-
-        <s-unordered-list>
-
-          <s-list-item>
-
-            Any logged-in customer is treated as a Level 1 member.
-
-          </s-list-item>
-
-          <s-list-item>
-
-            Variant member price overrides product member price.
-
-          </s-list-item>
-
-          <s-list-item>
-
-            Settings → Price data source chooses MemberPro-managed fields or
-            your existing store fields.
-
-          </s-list-item>
-
-          <s-list-item>
-
-            Product page: add the Member pricing block in the theme editor.
-
-          </s-list-item>
-
-          <s-list-item>
-
-            Product cards: add the Member pricing (card) app block, or use the
-
-            legacy snippet on Dawn-style themes.
-
-          </s-list-item>
-
-        </s-unordered-list>
-
+          <s-box padding="base" border="base" borderRadius="base" background="base">
+            <s-stack gap="small">
+              <s-heading>How it works</s-heading>
+              <s-unordered-list>
+                <s-list-item>Logged-in customers get member pricing.</s-list-item>
+                <s-list-item>
+                  Variant member price overrides product member price.
+                </s-list-item>
+                <s-list-item>
+                  Use MemberPro fields, or connect your own definitions.
+                </s-list-item>
+                <s-list-item>
+                  Checkout discounts apply automatically — no cart snippet
+                  required.
+                </s-list-item>
+              </s-unordered-list>
+            </s-stack>
+          </s-box>
+        </div>
       </s-section>
-
     </s-page>
-
   );
-
 }
-
