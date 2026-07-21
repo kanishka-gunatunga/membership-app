@@ -16,7 +16,27 @@
 
 .text {
   font-size: 1.2rem;
-  padding-bottom: 2rem;
+  padding-bottom: 1rem;
+}
+
+.pricing {
+  margin: 0 0 2rem;
+  color: #616161;
+  font-size: 1rem;
+}
+
+.legalLinks {
+  margin: 2rem 0 0;
+  font-size: 0.95rem;
+}
+
+.legalLinks a {
+  color: #005bd3;
+  text-decoration: none;
+}
+
+.legalLinks a:hover {
+  text-decoration: underline;
 }
 
 .content {

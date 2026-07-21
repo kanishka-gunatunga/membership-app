@@ -124,11 +124,15 @@ Configure public pricing in **Partner Dashboard → Apps → MemberPro → Distr
 
 The app also requests billing via the Billing API on install (see `app/shopify.server.ts`). Listing pricing and API billing should match.
 
+**Billing flow:** Shopify redirects to `/app/billing/callback` after charge approval. The callback waits for the subscription to become active (with retries) before opening the app, which prevents approve-plan redirect loops during review.
+
+**Privacy policy:** Public URL at `/privacy` — set this in your App Store listing and configure `APP_SUPPORT_EMAIL` in production.
+
 **Partner Dashboard → Distribution** must be set to **Public** (App Store) before the Billing API works in production.
 
 Local dev **skips** billing by default. Set `SHOPIFY_BILLING_FORCE=true` to test charge approval locally (use a clean browser profile if you see HTTP 431).
 
-Set `SHOPIFY_BILLING_SKIP=true` to force-disable billing checks anywhere.
+Set `SHOPIFY_BILLING_SKIP=true` only in local development — it **cannot** be used in production (the app will fail to start).
 
 Set `SHOPIFY_BILLING_TEST=true` in development to avoid real charges on non-dev stores.
 

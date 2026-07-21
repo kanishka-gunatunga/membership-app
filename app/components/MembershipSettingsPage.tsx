@@ -103,7 +103,10 @@ export default function MembershipSettingsPage() {
     metafieldOptions,
   } = useLoaderData<LoaderData>();
 
-  const { billingStatus } = useOutletContext<{ billingStatus: BillingStatus }>();
+  const { billingStatus, privacyPolicyUrl } = useOutletContext<{
+    billingStatus: BillingStatus;
+    privacyPolicyUrl: string;
+  }>();
   const actionData = useActionData<ActionData>();
   const navigation = useNavigation();
   const shopify = useAppBridge();
@@ -843,6 +846,9 @@ export default function MembershipSettingsPage() {
                   Current plan: {billingStatus.planName}
                 </s-paragraph>
               ) : null}
+              <s-link href={privacyPolicyUrl} target="_blank">
+                Privacy policy
+              </s-link>
             </s-stack>
           </s-box>
 

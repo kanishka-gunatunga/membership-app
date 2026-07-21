@@ -93,6 +93,10 @@ api_version = "2026-04"
   uri = "/webhooks/app/scopes_update"
   topics = ["app/scopes_update"]
 
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/app/subscriptions_update"
+  topics = ["app_subscriptions/update"]
+
   # orders/paid requires Protected Customer Data approval in Partner Dashboard.
   # [[webhooks.subscriptions]]
   # uri = "/webhooks/orders/paid"

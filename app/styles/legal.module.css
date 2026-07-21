@@ -1,0 +1,95 @@
+.page {
+  min-height: 100vh;
+  background: #f6f6f7;
+  color: #202223;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.6;
+}
+
+.header,
+.content,
+.footer {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.header {
+  padding-top: 2.5rem;
+}
+
+.homeLink {
+  color: #005bd3;
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+
+.homeLink:hover {
+  text-decoration: underline;
+}
+
+.title {
+  margin: 1rem 0 0.25rem;
+  font-size: 2rem;
+  line-height: 1.2;
+}
+
+.subtitle {
+  margin: 0;
+  color: #616161;
+}
+
+.meta {
+  margin: 0.75rem 0 0;
+  color: #616161;
+  font-size: 0.9rem;
+}
+
+.content {
+  background: #fff;
+  border: 1px solid #e3e3e3;
+  border-radius: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.content section + section {
+  margin-top: 1.75rem;
+}
+
+.content h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.25rem;
+}
+
+.content h3 {
+  margin: 1rem 0 0.5rem;
+  font-size: 1rem;
+}
+
+.content p,
+.content ul {
+  margin: 0 0 0.75rem;
+}
+
+.content ul {
+  padding-left: 1.25rem;
+}
+
+.content a {
+  color: #005bd3;
+}
+
+.footer {
+  padding-bottom: 2.5rem;
+  color: #616161;
+  font-size: 0.9rem;
+}
+
+.footer a {
+  color: #005bd3;
+  text-decoration: none;
+}
+
+.footer a:hover {
+  text-decoration: underline;
+}

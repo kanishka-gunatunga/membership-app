@@ -1,0 +1,10 @@
+.billingPage {
+  max-width: 36rem;
+}
+
+.planCard {
+  padding: 1.25rem;
+  border: 1px solid var(--p-color-border, #e3e3e3);
+  border-radius: 0.75rem;
+  background: var(--p-color-bg-surface, #fff);
+}

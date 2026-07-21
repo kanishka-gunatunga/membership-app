@@ -23,6 +23,10 @@ api_version = "2026-07"
   uri = "/webhooks/app/scopes_update"
   topics = ["app/scopes_update"]
 
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/app/subscriptions_update"
+  topics = ["app_subscriptions/update"]
+
   # orders/paid requires Protected Customer Data approval in Partner Dashboard.
   # Re-enable after approval: https://shopify.dev/docs/apps/launch/protected-customer-data
   # [[webhooks.subscriptions]]
