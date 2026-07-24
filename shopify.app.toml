@@ -2,7 +2,7 @@
 
 client_id = ""
 name = "MemberPro"
-application_url = "https://example.com"
+application_url = "https://memberpro.ktcloud365.com"
 embedded = true
 
 [access_scopes]
@@ -110,12 +110,16 @@ api_version = "2026-04"
   # topics = ["orders/paid"]
 
 [auth]
-redirect_urls = ["https://example.com/auth/callback"]
+redirect_urls = [
+  "https://memberpro.ktcloud365.com/auth/callback",
+  "https://memberpro.ktcloud365.com/auth/shopify/callback",
+  "https://memberpro.ktcloud365.com/api/auth/callback"
+]
 
 [app_proxy]
-url = "https://example.com"
+url = "https://memberpro.ktcloud365.com"
 subpath = "membership-pricing"
 prefix = "apps"
 
 [build]
-automatically_update_urls_on_dev = true
+automatically_update_urls_on_dev = false

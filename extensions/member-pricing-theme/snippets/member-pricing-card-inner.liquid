@@ -1,0 +1,156 @@
+{%- comment -%}
+  Server-rendered member pricing for product cards.
+  @param card_product {Product} required
+{%- endcomment -%}
+
+{%- liquid
+  assign mp_storefront_raw = shop.metafields['$app'].storefront_config.value
+  if mp_storefront_raw == blank
+    assign mp_storefront_raw = shop.metafields.app.storefront_config.value
+  endif
+
+  assign mp_member_label = 'Member price'
+  assign mp_metafield_source = 'app'
+  assign mp_product_handle = 'custom.member_price'
+  assign mp_variant_handle = 'custom.variant_member_price'
+  assign mp_campaign_handle = 'custom.cross_rrp'
+
+  if mp_storefront_raw != blank
+    assign mp_storefront = mp_storefront_raw | parse_json
+    if mp_storefront.memberLabel != blank
+      assign mp_member_label = mp_storefront.memberLabel
+    endif
+    if mp_storefront.metafieldSource == 'linked' or mp_storefront.metafieldSource == 'custom'
+      assign mp_metafield_source = 'linked'
+    elsif mp_storefront.metafieldSource == 'app'
+      assign mp_metafield_source = 'app'
+    endif
+    if mp_storefront.linkedProductMemberPrice != blank
+      assign mp_product_handle = mp_storefront.linkedProductMemberPrice
+    endif
+    if mp_storefront.linkedVariantMemberPrice != blank
+      assign mp_variant_handle = mp_storefront.linkedVariantMemberPrice
+    endif
+    if mp_storefront.linkedCampaign != blank
+      assign mp_campaign_handle = mp_storefront.linkedCampaign
+    endif
+  else
+    assign mp_config = metaobjects['$app:membership_config']['default']
+    if mp_config == blank
+      assign mp_config = shop.metaobjects['$app:membership_config']['default']
+    endif
+    if mp_config == blank
+      assign mp_config = metaobjects.membership_config.default
+    endif
+    if mp_config == blank
+      assign mp_config = shop.metaobjects.membership_config.default
+    endif
+
+    if mp_config != blank
+      if mp_config.member_label.value != blank
+        assign mp_member_label = mp_config.member_label.value
+      endif
+
+      if mp_config.metafield_source.value == 'linked' or mp_config.metafield_source.value == 'custom'
+        assign mp_metafield_source = 'linked'
+      elsif mp_config.metafield_source.value == 'app'
+        assign mp_metafield_source = 'app'
+      elsif mp_config.linked_product_member_price.value != blank
+        assign mp_metafield_source = 'linked'
+      endif
+
+      if mp_config.linked_product_member_price.value != blank
+        assign mp_product_handle = mp_config.linked_product_member_price.value
+      endif
+      if mp_config.linked_variant_member_price.value != blank
+        assign mp_variant_handle = mp_config.linked_variant_member_price.value
+      endif
+      if mp_config.linked_campaign.value != blank
+        assign mp_campaign_handle = mp_config.linked_campaign.value
+      endif
+    endif
+  endif
+
+  assign mp_product_parts = mp_product_handle | split: '.'
+  assign mp_variant_parts = mp_variant_handle | split: '.'
+  assign mp_campaign_parts = mp_campaign_handle | split: '.'
+  assign mp_product_ns = mp_product_parts[0]
+  assign mp_product_key = mp_product_parts[1]
+  assign mp_variant_ns = mp_variant_parts[0]
+  assign mp_variant_key = mp_variant_parts[1]
+  assign mp_campaign_ns = mp_campaign_parts[0]
+  assign mp_campaign_key = mp_campaign_parts[1]
+
+  assign current_variant = card_product.selected_or_first_available_variant
+  assign rrp_cents = current_variant.price
+  assign member_cents = 0
+  assign member_metafield = blank
+
+  if mp_metafield_source == 'linked'
+    assign variant_member_metafield = current_variant.metafields[mp_variant_ns][mp_variant_key]
+    assign product_member_metafield = card_product.metafields[mp_product_ns][mp_product_key]
+    assign campaign_metafield = card_product.metafields[mp_campaign_ns][mp_campaign_key]
+  else
+    assign variant_app_metafield = current_variant.metafields['$app'].member_price
+    assign variant_dot_app_metafield = current_variant.metafields.app.member_price
+    assign product_app_metafield = card_product.metafields['$app'].member_price
+    assign product_dot_app_metafield = card_product.metafields.app.member_price
+
+    if variant_app_metafield != blank
+      assign variant_member_metafield = variant_app_metafield
+    elsif variant_dot_app_metafield != blank
+      assign variant_member_metafield = variant_dot_app_metafield
+    else
+      assign variant_member_metafield = blank
+    endif
+
+    if product_app_metafield != blank
+      assign product_member_metafield = product_app_metafield
+    elsif product_dot_app_metafield != blank
+      assign product_member_metafield = product_dot_app_metafield
+    else
+      assign product_member_metafield = blank
+    endif
+
+    assign campaign_metafield = card_product.metafields['$app'].campaign | default: card_product.metafields.app.campaign
+  endif
+
+  if variant_member_metafield != blank
+    assign member_metafield = variant_member_metafield
+  elsif product_member_metafield != blank
+    assign member_metafield = product_member_metafield
+  endif
+
+  if member_metafield != blank and member_metafield.value != blank
+    if member_metafield.value.amount != blank
+      assign member_cents = member_metafield.value.amount | times: 100 | round
+    elsif member_metafield.value > 0
+      assign member_cents = member_metafield.value
+    else
+      assign member_cents = member_metafield.value | money_without_currency | remove: ',' | times: 100 | round
+    endif
+  endif
+
+  assign has_member_price = false
+  if member_cents > 0 and rrp_cents > member_cents
+    assign has_member_price = true
+  endif
+
+  assign campaign_strike = false
+  if campaign_metafield.value == true
+    assign campaign_strike = true
+  endif
+-%}
+
+<div class="member-pricing__prices member-pricing__prices--stacked">
+  {%- if has_member_price -%}
+    <p class="member-pricing__member member-pricing__member--card">
+      <span class="member-pricing__member-label">{{ mp_member_label | escape }}</span>
+      <span class="member-pricing__member-amount">{{ member_cents | money }}</span>
+    </p>
+  {%- endif -%}
+  <p class="member-pricing__rrp{% if campaign_strike %} member-pricing__rrp--strike{% endif %}">
+    <span class="member-pricing__rrp-label">RRP</span>
+    <span class="member-pricing__rrp-amount">{{ rrp_cents | money }}</span>
+  </p>
+</div>

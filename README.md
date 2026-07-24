@@ -105,11 +105,23 @@ Verify `MemberOrderSnapshot` row created when order used **MemberPro** discount.
 
 ## Deploy
 
+**Full production guide:** [DEPLOYMENT.md](./DEPLOYMENT.md)
+
+Quick summary:
+
+1. Host the Node app (Dockerfile included) with PostgreSQL + env vars from [`.env.example`](./.env.example).
+2. Update `application_url`, auth, and app proxy URLs in `shopify.app.membership-pricing.toml`.
+3. Run `shopify app deploy` for extensions + Partner Dashboard URL sync.
+4. Set Partner Dashboard distribution to **Public** and listing privacy URL to `/privacy`.
+5. Run the production test checklist in [DEPLOYMENT.md](./DEPLOYMENT.md).
+
 ```bash
 shopify app deploy
 ```
 
-Host the web app (replace `example.com` in TOML). Run `prisma migrate deploy` on production database.
+Health check after deploy: `GET /health`
+
+Host the web app (replace `example.com` in TOML). Run `prisma migrate deploy` on production database (automatic via `npm run docker-start` in Docker).
 
 ## App Store billing listing
 

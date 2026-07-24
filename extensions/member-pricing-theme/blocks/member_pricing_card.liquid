@@ -5,19 +5,16 @@
 {%- if card_product != blank -%}
   {%- assign current_variant = card_product.selected_or_first_available_variant -%}
   <div
-    class="member-pricing member-pricing--card"
+    class="member-pricing member-pricing--card member-pricing--card-ssr"
     data-member-pricing-card
+    data-member-pricing-ssr="true"
+    data-member-pricing-ready="true"
     data-product-handle="{{ card_product.handle }}"
     data-rrp-cents="{{ current_variant.price }}"
     {{ block.shopify_attributes }}
   >
     <div data-member-pricing-content>
-      <div class="member-pricing__prices member-pricing__prices--stacked">
-        <p class="member-pricing__rrp">
-          <span class="member-pricing__rrp-label">RRP</span>
-          <span class="member-pricing__rrp-amount">{{ current_variant.price | money }}</span>
-        </p>
-      </div>
+      {% render 'member-pricing-card-inner', card_product: card_product %}
     </div>
   </div>
 {%- elsif request.design_mode -%}

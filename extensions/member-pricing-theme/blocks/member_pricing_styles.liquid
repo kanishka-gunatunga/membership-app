@@ -1,5 +1,5 @@
 {%- comment -%}
-  Loads CSS + JS for product card member pricing hydration.
+  Loads CSS + optional JS fallback for dynamically injected product cards.
   Enable under Theme settings → App embeds → Card pricing styles.
 {%- endcomment -%}
 
@@ -12,7 +12,7 @@
   "settings": [
     {
       "type": "paragraph",
-      "content": "Required for product card member pricing on collection pages. Enable on all pages, then hard-refresh."
+      "content": "Required for product card member pricing on collection pages. Prices render in HTML on page load; JS only hydrates cards added later (e.g. carousels). Hard-refresh after enabling."
     }
   ]
 }
