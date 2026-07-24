@@ -11,7 +11,6 @@ import { useAppBridge } from "@shopify/app-bridge-react";
 import type { MetafieldSource } from "../lib/membership.shared";
 import type { MemberPriceCatalogStatus } from "../lib/membership-products.server";
 import type { ThemeCardSetupGuide } from "../lib/theme-card-install.server";
-import type { LinkableMetafieldOptions } from "../lib/metafield-definitions.server";
 import {
   APP_BILLING_AMOUNT_USD,
   APP_BILLING_TRIAL_DAYS,
@@ -43,7 +42,6 @@ type LoaderData = {
   cardSetup: ThemeCardSetupGuide | null;
   catalogStatus: MemberPriceCatalogStatus;
   cardSnippetSource: string;
-  metafieldOptions: LinkableMetafieldOptions;
 };
 
 type ActionData =
@@ -64,30 +62,7 @@ function readTextFieldValue(event: Event): string {
   return typeof target.value === "string" ? target.value : "";
 }
 
-function ensureOption(
-  options: LinkableMetafieldOptions["productMoney"],
-  handle: string,
-  ownerType: "PRODUCT" | "PRODUCTVARIANT",
-  type: string,
-) {
-  if (!handle || options.some((option) => option.handle === handle)) {
-    return options;
-  }
-  const dot = handle.indexOf(".");
-  return [
-    {
-      handle,
-      namespace: dot > 0 ? handle.slice(0, dot) : handle,
-      key: dot > 0 ? handle.slice(dot + 1) : "",
-      name: handle,
-      type,
-      ownerType,
-    },
-    ...options,
-  ];
-}
-
-export default function MembershipSettingsPage() {
+function MembershipSettingsPageContent() {
   const {
     config: loaderConfig,
     discountActive: loaderDiscountActive,
@@ -100,7 +75,6 @@ export default function MembershipSettingsPage() {
     cardSetup,
     catalogStatus,
     cardSnippetSource,
-    metafieldOptions,
   } = useLoaderData<LoaderData>();
 
   const { billingStatus, privacyPolicyUrl } = useOutletContext<{
@@ -129,20 +103,10 @@ export default function MembershipSettingsPage() {
     config.linkedVariantMemberPrice,
   );
   const [linkedCampaign, setLinkedCampaign] = useState(config.linkedCampaign);
-  const [useManualHandles, setUseManualHandles] = useState(false);
   const [copiedRenderLine, setCopiedRenderLine] = useState(false);
   const [copiedSnippetFile, setCopiedSnippetFile] = useState(false);
   const [setupOpen, setSetupOpen] = useState(true);
   const [legacyOpen, setLegacyOpen] = useState(false);
-
-  useEffect(() => {
-    setEnabled(config.enabled);
-    setMemberLabel(config.memberLabel);
-    setMetafieldSource(config.metafieldSource ?? "app");
-    setLinkedProductMemberPrice(config.linkedProductMemberPrice);
-    setLinkedVariantMemberPrice(config.linkedVariantMemberPrice);
-    setLinkedCampaign(config.linkedCampaign);
-  }, [config]);
 
   useEffect(() => {
     if (actionData?.ok) {
@@ -164,39 +128,6 @@ export default function MembershipSettingsPage() {
   const snippetLine =
     cardSetup?.snippetLine ??
     "{% render 'member-pricing-card', product: card_product %}";
-
-  const productMoneyOptions = useMemo(
-    () =>
-      ensureOption(
-        metafieldOptions.productMoney,
-        linkedProductMemberPrice,
-        "PRODUCT",
-        "money",
-      ),
-    [metafieldOptions.productMoney, linkedProductMemberPrice],
-  );
-
-  const variantMoneyOptions = useMemo(
-    () =>
-      ensureOption(
-        metafieldOptions.variantMoney,
-        linkedVariantMemberPrice,
-        "PRODUCTVARIANT",
-        "money",
-      ),
-    [metafieldOptions.variantMoney, linkedVariantMemberPrice],
-  );
-
-  const campaignOptions = useMemo(
-    () =>
-      ensureOption(
-        metafieldOptions.productBoolean,
-        linkedCampaign,
-        "PRODUCT",
-        "boolean",
-      ),
-    [metafieldOptions.productBoolean, linkedCampaign],
-  );
 
   const setupCompleted = [
     discountActive,
@@ -227,9 +158,16 @@ export default function MembershipSettingsPage() {
       <s-button
         slot="primary-action"
         variant="primary"
-        type="submit"
-        form="membership-settings-form"
+        disabled={isSaving}
         {...(isSaving ? { loading: true } : {})}
+        onClick={() => {
+          if (isSaving) return;
+          (
+            document.getElementById(
+              "membership-settings-form",
+            ) as HTMLFormElement | null
+          )?.requestSubmit();
+        }}
       >
         Save
       </s-button>
@@ -359,8 +297,8 @@ export default function MembershipSettingsPage() {
                 MemberPro Member price and Campaign fields.
               </s-choice>
               <s-choice value="linked" selected={metafieldSource === "linked"}>
-                Connect existing store fields — choose which metafield
-                definitions already in your store to use.
+                Connect existing store fields — enter the namespace.key handles
+                for metafields already in your store.
               </s-choice>
             </s-choice-list>
 
@@ -386,135 +324,69 @@ export default function MembershipSettingsPage() {
                     </s-unordered-list>
                   </s-banner>
 
-                  {productMoneyOptions.length === 0 &&
-                    variantMoneyOptions.length === 0 ? (
-                    <s-paragraph color="subdued">
-                      No matching metafield definitions found. Create Money /
-                      Boolean metafields in Settings → Custom data, or enter
-                      handles manually.
-                    </s-paragraph>
-                  ) : null}
-
-                  <s-checkbox
-                    label="Enter metafield handles manually"
-                    checked={useManualHandles}
-                    onChange={(event: Event) => {
-                      const target = event.currentTarget as HTMLInputElement & {
-                        checked?: boolean;
-                      };
-                      setUseManualHandles(Boolean(target.checked));
-                    }}
-                  />
+                  <s-paragraph color="subdued">
+                    Enter each handle as <strong>namespace.key</strong> from
+                    Settings → Custom data (for example{" "}
+                    <strong>custom.member_price</strong>).
+                  </s-paragraph>
 
                   <div className={styles.connectFields}>
                     <div className={styles.fieldBlock}>
                       <s-text type="strong">Product member price</s-text>
-                      {useManualHandles ? (
-                        <input
-                          className={styles.nativeInput}
-                          name="linkedProductMemberPrice"
-                          value={linkedProductMemberPrice}
-                          onChange={(event) =>
-                            setLinkedProductMemberPrice(event.currentTarget.value)
-                          }
-                          placeholder="custom.member_price"
-                          required
-                        />
-                      ) : (
-                        <select
-                          className={styles.nativeSelect}
-                          name="linkedProductMemberPrice"
-                          value={linkedProductMemberPrice}
-                          onChange={(event) =>
-                            setLinkedProductMemberPrice(event.currentTarget.value)
-                          }
-                          required
-                        >
-                          <option value="">Select a Money metafield…</option>
-                          {productMoneyOptions.map((option) => (
-                            <option key={option.handle} value={option.handle}>
-                              {option.handle}
-                            </option>
-                          ))}
-                        </select>
-                      )}
+                      <input
+                        className={styles.nativeInput}
+                        name="linkedProductMemberPrice"
+                        value={linkedProductMemberPrice}
+                        onChange={(event) =>
+                          setLinkedProductMemberPrice(event.currentTarget.value)
+                        }
+                        placeholder="custom.member_price"
+                        required
+                        autoComplete="off"
+                        spellCheck={false}
+                      />
                       <p className={styles.fieldHelp}>
-                        namespace.key · Money type
-                        {linkedProductMemberPrice
-                          ? ` · selected: ${linkedProductMemberPrice}`
-                          : ""}
+                        Product metafield · Money type · namespace.key
                       </p>
                     </div>
 
                     <div className={styles.fieldBlock}>
                       <s-text type="strong">Variant member price</s-text>
-                      {useManualHandles ? (
-                        <input
-                          className={styles.nativeInput}
-                          name="linkedVariantMemberPrice"
-                          value={linkedVariantMemberPrice}
-                          onChange={(event) =>
-                            setLinkedVariantMemberPrice(event.currentTarget.value)
-                          }
-                          placeholder="custom.variant_member_price"
-                          required
-                        />
-                      ) : (
-                        <select
-                          className={styles.nativeSelect}
-                          name="linkedVariantMemberPrice"
-                          value={linkedVariantMemberPrice}
-                          onChange={(event) =>
-                            setLinkedVariantMemberPrice(event.currentTarget.value)
-                          }
-                          required
-                        >
-                          <option value="">Select a Money metafield…</option>
-                          {variantMoneyOptions.map((option) => (
-                            <option key={option.handle} value={option.handle}>
-                              {option.handle}
-                            </option>
-                          ))}
-                        </select>
-                      )}
+                      <input
+                        className={styles.nativeInput}
+                        name="linkedVariantMemberPrice"
+                        value={linkedVariantMemberPrice}
+                        onChange={(event) =>
+                          setLinkedVariantMemberPrice(event.currentTarget.value)
+                        }
+                        placeholder="custom.variant_member_price"
+                        required
+                        autoComplete="off"
+                        spellCheck={false}
+                      />
                       <p className={styles.fieldHelp}>
-                        Overrides product member price when set
+                        Variant metafield · Money type · overrides product price
+                        when set
                       </p>
                     </div>
 
                     <div className={styles.fieldBlock}>
                       <s-text type="strong">Campaign (RRP strikethrough)</s-text>
-                      {useManualHandles ? (
-                        <input
-                          className={styles.nativeInput}
-                          name="linkedCampaign"
-                          value={linkedCampaign}
-                          onChange={(event) =>
-                            setLinkedCampaign(event.currentTarget.value)
-                          }
-                          placeholder="custom.cross_rrp"
-                          required
-                        />
-                      ) : (
-                        <select
-                          className={styles.nativeSelect}
-                          name="linkedCampaign"
-                          value={linkedCampaign}
-                          onChange={(event) =>
-                            setLinkedCampaign(event.currentTarget.value)
-                          }
-                          required
-                        >
-                          <option value="">Select a True/false metafield…</option>
-                          {campaignOptions.map((option) => (
-                            <option key={option.handle} value={option.handle}>
-                              {option.handle}
-                            </option>
-                          ))}
-                        </select>
-                      )}
+                      <input
+                        className={styles.nativeInput}
+                        name="linkedCampaign"
+                        value={linkedCampaign}
+                        onChange={(event) =>
+                          setLinkedCampaign(event.currentTarget.value)
+                        }
+                        placeholder="custom.cross_rrp"
+                        required
+                        autoComplete="off"
+                        spellCheck={false}
+                      />
                       <p className={styles.fieldHelp}>
-                        True/false · when true, RRP is struck through
+                        Product metafield · True/false · when true, RRP is struck
+                        through
                       </p>
                     </div>
                   </div>
@@ -874,4 +746,29 @@ export default function MembershipSettingsPage() {
       </s-section>
     </s-page>
   );
+}
+
+export default function MembershipSettingsPage() {
+  const { config } = useLoaderData<LoaderData>();
+  const configSyncKey = useMemo(
+    () =>
+      [
+        config.enabled,
+        config.memberLabel,
+        config.metafieldSource ?? "app",
+        config.linkedProductMemberPrice,
+        config.linkedVariantMemberPrice,
+        config.linkedCampaign,
+      ].join("|"),
+    [
+      config.enabled,
+      config.memberLabel,
+      config.metafieldSource,
+      config.linkedProductMemberPrice,
+      config.linkedVariantMemberPrice,
+      config.linkedCampaign,
+    ],
+  );
+
+  return <MembershipSettingsPageContent key={configSyncKey} />;
 }

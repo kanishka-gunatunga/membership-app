@@ -36,13 +36,22 @@
     );
   }
 
-  function renderRegularPrice(rrpCents) {
+  function renderRrpOnly(rrpCents, labels, campaignStrike) {
+    var rrpClass =
+      'member-pricing__rrp' + (campaignStrike ? ' member-pricing__rrp--strike' : '');
     return (
-      '<p class="member-pricing__regular-only">' +
-      '<span class="member-pricing__regular-amount">' +
+      '<div class="member-pricing__prices member-pricing__prices--stacked">' +
+      '<p class="' +
+      rrpClass +
+      '">' +
+      '<span class="member-pricing__rrp-label">' +
+      (labels.rrpLabel || 'RRP') +
+      '</span> ' +
+      '<span class="member-pricing__rrp-amount">' +
       formatMoney(rrpCents) +
       '</span>' +
-      '</p>'
+      '</p>' +
+      '</div>'
     );
   }
 
@@ -63,7 +72,11 @@
       );
       card.setAttribute('data-member-pricing-has-member', 'true');
     } else {
-      slot.innerHTML = renderRegularPrice(rrpCents);
+      slot.innerHTML = renderRrpOnly(
+        rrpCents,
+        labels,
+        pricing.campaignStrike,
+      );
       card.removeAttribute('data-member-pricing-has-member');
     }
 
@@ -118,7 +131,7 @@
           var slot = card.querySelector('[data-member-pricing-content]');
           var rrpCents = Number(card.getAttribute('data-rrp-cents')) || 0;
           if (slot && rrpCents > 0) {
-            slot.innerHTML = renderRegularPrice(rrpCents);
+            slot.innerHTML = renderRrpOnly(rrpCents, DEFAULT_LABELS, false);
           }
           card.setAttribute('data-member-pricing-ready', 'true');
         });
@@ -141,40 +154,4 @@
 
   window.addEventListener('load', scheduleHydrate);
   document.addEventListener('shopify:section:load', scheduleHydrate);
-
-  /** Dawn cart drawer/page: hide duplicate TOTAL column when discount already shows unit price in details */
-  function hideDuplicateCartLineTotals() {
-    var rows = document.querySelectorAll('tr.cart-item, .cart-item');
-    rows.forEach(function (row) {
-      var details = row.querySelector('.cart-item__details');
-      if (!details) return;
-
-      var hasMemberDiscountLine =
-        details.querySelector('.cart-item__discounted-prices') &&
-        details.querySelector('.discounts__discount');
-
-      if (!hasMemberDiscountLine) return;
-
-      row.querySelectorAll('.cart-item__totals').forEach(function (totals) {
-        totals.style.setProperty('display', 'none', 'important');
-      });
-    });
-  }
-
-  function scheduleCartDrawerFix() {
-    hideDuplicateCartLineTotals();
-    window.setTimeout(hideDuplicateCartLineTotals, 100);
-    window.setTimeout(hideDuplicateCartLineTotals, 500);
-  }
-
-  window.MemberPricingCart = { hideDuplicateTotals: scheduleCartDrawerFix };
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', scheduleCartDrawerFix);
-  } else {
-    scheduleCartDrawerFix();
-  }
-
-  window.addEventListener('load', scheduleCartDrawerFix);
-  document.addEventListener('shopify:section:load', scheduleCartDrawerFix);
 })();

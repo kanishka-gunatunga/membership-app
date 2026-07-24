@@ -45,6 +45,15 @@ url = "https://example.com"
 subpath = "membership-pricing"
 prefix = "apps"
 
+[shop.metafields.app.storefront_config]
+type = "json"
+name = "MemberPro storefront config"
+description = "Storefront pricing settings synced from MemberPro"
+
+  [shop.metafields.app.storefront_config.access]
+  admin = "merchant_read_write"
+  storefront = "public_read"
+
 [product.metafields.app.member_price]
 type = "money"
 name = "Member price"

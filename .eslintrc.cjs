@@ -89,6 +89,14 @@ module.exports = {
         node: true,
       },
     },
+
+    // Theme storefront assets (Shopify global)
+    {
+      files: ["extensions/member-pricing-theme/assets/**/*.js"],
+      globals: {
+        Shopify: "readonly",
+      },
+    },
   ],
   globals: {
     shopify: "readonly"

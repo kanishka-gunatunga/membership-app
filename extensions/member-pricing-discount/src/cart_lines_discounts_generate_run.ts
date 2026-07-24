@@ -166,13 +166,13 @@ export function cartLinesDiscountsGenerateRun(
 
     const variantMemberPrice = pickMoneyMetafield(
       functionConfig.metafieldSource,
-      line.merchandise.appMemberPrice,
-      line.merchandise.customMemberPrice,
+      line.merchandise.appMemberPrice ?? null,
+      line.merchandise.customMemberPrice ?? null,
     );
     const productMemberPrice = pickMoneyMetafield(
       functionConfig.metafieldSource,
-      line.merchandise.product?.appMemberPrice,
-      line.merchandise.product?.customMemberPrice,
+      line.merchandise.product?.appMemberPrice ?? null,
+      line.merchandise.product?.customMemberPrice ?? null,
     );
     const memberPriceCents = resolveMemberPriceCents(
       variantMemberPrice,

@@ -10,7 +10,10 @@ import {
   parseMetafieldSource,
   type MembershipConfig,
 } from "./membership.shared";
-import { saveMembershipConfig } from "./membership-config.server";
+import {
+  saveMembershipConfig,
+  saveStorefrontConfigToShop,
+} from "./membership-config.server";
 
 type AdminGraphQLClient = Awaited<
   ReturnType<typeof authenticate.admin>
@@ -185,13 +188,6 @@ async function activateAutomaticDiscount(
   }
 }
 
-async function findAutomaticDiscountId(
-  admin: AdminGraphQLClient,
-): Promise<string | null> {
-  const node = await findMembershipDiscountNode(admin);
-  return node?.discountId ?? null;
-}
-
 async function createAutomaticDiscount(
   admin: AdminGraphQLClient,
   config: MembershipConfig,
@@ -291,6 +287,19 @@ export async function syncMembershipDiscount(
 
   if (!discountId) {
     throw new Error("Member pricing discount could not be created or found.");
+  }
+
+  try {
+    await saveStorefrontConfigToShop(admin, config);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Storefront config sync failed";
+    if (config.metafieldSource === "linked") {
+      throw new Error(
+        `Linked metafield settings were saved for checkout, but storefront pricing could not sync (${message}). Run shopify app deploy, then save again.`,
+      );
+    }
+    console.warn("Storefront config sync failed (non-fatal):", error);
   }
 
   try {

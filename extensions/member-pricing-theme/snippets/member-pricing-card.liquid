@@ -18,9 +18,12 @@
     data-rrp-cents="{{ current_variant.price }}"
   >
     <div data-member-pricing-content>
-      <p class="member-pricing__regular-only">
-        <span class="member-pricing__regular-amount">{{ current_variant.price | money }}</span>
-      </p>
+      <div class="member-pricing__prices member-pricing__prices--stacked">
+        <p class="member-pricing__rrp">
+          <span class="member-pricing__rrp-label">RRP</span>
+          <span class="member-pricing__rrp-amount">{{ current_variant.price | money }}</span>
+        </p>
+      </div>
     </div>
   </div>
 {%- endif -%}

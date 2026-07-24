@@ -21,7 +21,6 @@ import {
 } from "../lib/membership.shared";
 import { getThemeCardSetupGuide, getCardSnippetSource } from "../lib/theme-card-install.server";
 import { getMemberPriceCatalogStatus } from "../lib/membership-products.server";
-import { getLinkableMetafieldOptions } from "../lib/metafield-definitions.server";
 import { syncLinkedMetafieldsToApp } from "../lib/sync-linked-metafields.server";
 import {
   getThemeAppEmbedUrl,
@@ -90,14 +89,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   }
 
   const config = await loadMembershipConfigFromDiscount(admin);
-  const [cardSetup, mainTheme, catalogStatus, metafieldOptions] =
-    await Promise.all([
+  const [cardSetup, mainTheme, catalogStatus] = await Promise.all([
       session.shop
         ? getThemeCardSetupGuide(admin, session.shop)
         : Promise.resolve(null),
       loadMainTheme(admin),
       getMemberPriceCatalogStatus(admin, config),
-      getLinkableMetafieldOptions(admin),
     ]);
 
   const apiKey = process.env.SHOPIFY_API_KEY || "";
@@ -149,7 +146,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     cardSetup,
     catalogStatus,
     cardSnippetSource,
-    metafieldOptions,
   };
 };
 

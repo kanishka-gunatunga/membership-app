@@ -2,10 +2,12 @@ import type { authenticate } from "../shopify.server";
 import {
   DEFAULT_MEMBERSHIP_CONFIG,
   MEMBERSHIP_CONFIG_METAOBJECT_TYPE,
+  STOREFRONT_CONFIG_METAFIELD_KEY,
   formatMetafieldHandle,
   parseLinkedMetafields,
   parseMetafieldHandle,
   parseMetafieldSource,
+  storefrontConfigJson,
   type MembershipConfig,
 } from "./membership.shared";
 
@@ -14,6 +16,31 @@ type AdminGraphQLClient = Awaited<
 >["admin"];
 
 const MEMBERSHIP_CONFIG_HANDLE = "default";
+
+const DEFINITION_BY_TYPE_QUERY = `#graphql
+  query MembershipConfigDefinition {
+    metaobjectDefinitionByType(type: "${MEMBERSHIP_CONFIG_METAOBJECT_TYPE}") {
+      id
+    }
+  }
+`;
+
+const CREATE_DEFINITION_MUTATION = `#graphql
+  mutation CreateMembershipConfigDefinition(
+    $definition: MetaobjectDefinitionCreateInput!
+  ) {
+    metaobjectDefinitionCreate(definition: $definition) {
+      metaobjectDefinition {
+        id
+        type
+      }
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+`;
 
 const LOAD_CONFIG_QUERY = `#graphql
   query LoadMembershipConfig {
@@ -29,6 +56,28 @@ const LOAD_CONFIG_QUERY = `#graphql
       linkedProductMemberPrice: field(key: "linked_product_member_price") { value }
       linkedVariantMemberPrice: field(key: "linked_variant_member_price") { value }
       linkedCampaign: field(key: "linked_campaign") { value }
+    }
+  }
+`;
+
+const SHOP_ID_QUERY = `#graphql
+  query ShopId {
+    shop {
+      id
+    }
+  }
+`;
+
+const STOREFRONT_CONFIG_SET_MUTATION = `#graphql
+  mutation SaveStorefrontConfig($metafields: [MetafieldsSetInput!]!) {
+    metafieldsSet(metafields: $metafields) {
+      metafields {
+        id
+      }
+      userErrors {
+        field
+        message
+      }
     }
   }
 `;
@@ -116,11 +165,168 @@ export async function loadMembershipConfig(
   }
 }
 
+function isMissingDefinitionError(message: string): boolean {
+  return (
+    message.includes("No metaobject definition exists") ||
+    (message.includes("metaobject definition") &&
+      message.includes("does not exist"))
+  );
+}
+
+async function ensureMembershipConfigDefinition(
+  admin: AdminGraphQLClient,
+): Promise<void> {
+  const checkResponse = await admin.graphql(DEFINITION_BY_TYPE_QUERY);
+  const checkPayload = (await checkResponse.json()) as GraphqlPayload;
+  assertGraphqlOk(checkPayload, "Load membership config definition");
+
+  if (
+    (checkPayload.data?.metaobjectDefinitionByType as { id?: string } | null)
+      ?.id
+  ) {
+    return;
+  }
+
+  const response = await admin.graphql(CREATE_DEFINITION_MUTATION, {
+    variables: {
+      definition: {
+        name: "Membership Config",
+        type: MEMBERSHIP_CONFIG_METAOBJECT_TYPE,
+        description: "Global membership pricing settings for the shop",
+        displayNameKey: "title",
+        access: {
+          admin: "MERCHANT_READ_WRITE",
+          storefront: "PUBLIC_READ",
+        },
+        fieldDefinitions: [
+          {
+            key: "title",
+            name: "Title",
+            type: "single_line_text_field",
+            required: true,
+          },
+          {
+            key: "enabled",
+            name: "Membership pricing enabled",
+            type: "boolean",
+          },
+          {
+            key: "member_label",
+            name: "Member label",
+            type: "single_line_text_field",
+          },
+          {
+            key: "savings_label",
+            name: "Savings label",
+            type: "single_line_text_field",
+          },
+          {
+            key: "metafield_source",
+            name: "Metafield source",
+            type: "single_line_text_field",
+          },
+          {
+            key: "linked_product_member_price",
+            name: "Linked product member price",
+            type: "single_line_text_field",
+          },
+          {
+            key: "linked_variant_member_price",
+            name: "Linked variant member price",
+            type: "single_line_text_field",
+          },
+          {
+            key: "linked_campaign",
+            name: "Linked campaign field",
+            type: "single_line_text_field",
+          },
+        ],
+      },
+    },
+  });
+
+  const payload = (await response.json()) as GraphqlPayload;
+  assertGraphqlOk(payload, "Create membership config definition");
+
+  const userErrors =
+    (
+      payload.data?.metaobjectDefinitionCreate as {
+        userErrors?: Array<{ message: string }>;
+      }
+    )?.userErrors ?? [];
+
+  if (userErrors.length > 0) {
+    const messages = userErrors.map((error) => error.message).join("; ");
+    if (
+      messages.includes("taken") ||
+      messages.includes("already exists") ||
+      messages.includes("has already been taken")
+    ) {
+      return;
+    }
+    throw new Error(messages);
+  }
+}
+
+export async function saveStorefrontConfigToShop(
+  admin: AdminGraphQLClient,
+  config: MembershipConfig,
+): Promise<void> {
+  const shopResponse = await admin.graphql(SHOP_ID_QUERY);
+  const shopPayload = (await shopResponse.json()) as GraphqlPayload;
+  assertGraphqlOk(shopPayload, "Load shop id");
+
+  const shopId = (shopPayload.data?.shop as { id?: string } | undefined)?.id;
+  if (!shopId) {
+    throw new Error("Shop id could not be loaded.");
+  }
+
+  const response = await admin.graphql(STOREFRONT_CONFIG_SET_MUTATION, {
+    variables: {
+      metafields: [
+        {
+          ownerId: shopId,
+          namespace: "$app",
+          key: STOREFRONT_CONFIG_METAFIELD_KEY,
+          type: "json",
+          value: storefrontConfigJson(config),
+        },
+      ],
+    },
+  });
+
+  const payload = (await response.json()) as GraphqlPayload;
+  assertGraphqlOk(payload, "Save storefront config");
+
+  const userErrors =
+    (
+      payload.data?.metafieldsSet as {
+        userErrors?: Array<{ message: string }>;
+      }
+    )?.userErrors ?? [];
+
+  if (userErrors.length > 0) {
+    const messages = userErrors.map((error) => error.message).join("; ");
+    if (
+      messages.includes("does not exist") ||
+      messages.includes("definition") ||
+      messages.includes("Definition")
+    ) {
+      throw new Error(
+        `${messages} Run shopify app deploy, then save again.`,
+      );
+    }
+    throw new Error(messages);
+  }
+}
+
 export async function saveMembershipConfig(
   admin: AdminGraphQLClient,
   config: MembershipConfig,
 ): Promise<void> {
   try {
+    await ensureMembershipConfigDefinition(admin);
+
     const response = await admin.graphql(UPSERT_CONFIG_MUTATION, {
       variables: {
         handle: {
@@ -173,6 +379,11 @@ export async function saveMembershipConfig(
     if (isMissingMetaobjectScopeError(message)) {
       throw new Error(
         "Missing app scopes for metaobjects. Reinstall the app after updating scopes.",
+      );
+    }
+    if (isMissingDefinitionError(message)) {
+      throw new Error(
+        `${message} Run shopify app deploy, then save again. If it persists, reinstall MemberPro on this store.`,
       );
     }
     throw error;

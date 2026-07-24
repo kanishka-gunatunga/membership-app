@@ -1,39 +1,91 @@
 {%- liquid
-  assign block_id = block.id | default: section.id
-  assign mp_member_label = 'Member price'
-  assign mp_metafield_source = 'app'
-  assign mp_config = shop.metaobjects.membership_config.default
-  if mp_config != blank and mp_config.member_label.value != blank
-    assign mp_member_label = mp_config.member_label.value
-  endif
-  if mp_config != blank and mp_config.metafield_source.value != blank
-    assign mp_metafield_source = mp_config.metafield_source.value
-  endif
-  if mp_metafield_source == 'custom'
-    assign mp_metafield_source = 'linked'
+  assign mp_storefront_raw = shop.metafields['$app'].storefront_config.value
+  if mp_storefront_raw == blank
+    assign mp_storefront_raw = shop.metafields.app.storefront_config.value
   endif
 
+  assign mp_member_label = 'Member price'
+  assign mp_metafield_source = 'app'
+  assign mp_product_handle = 'custom.member_price'
+  assign mp_variant_handle = 'custom.variant_member_price'
+  assign mp_campaign_handle = 'custom.cross_rrp'
+
+  if mp_storefront_raw != blank
+    assign mp_storefront = mp_storefront_raw | parse_json
+    if mp_storefront.memberLabel != blank
+      assign mp_member_label = mp_storefront.memberLabel
+    endif
+    if mp_storefront.metafieldSource == 'linked' or mp_storefront.metafieldSource == 'custom'
+      assign mp_metafield_source = 'linked'
+    elsif mp_storefront.metafieldSource == 'app'
+      assign mp_metafield_source = 'app'
+    endif
+    if mp_storefront.linkedProductMemberPrice != blank
+      assign mp_product_handle = mp_storefront.linkedProductMemberPrice
+    endif
+    if mp_storefront.linkedVariantMemberPrice != blank
+      assign mp_variant_handle = mp_storefront.linkedVariantMemberPrice
+    endif
+    if mp_storefront.linkedCampaign != blank
+      assign mp_campaign_handle = mp_storefront.linkedCampaign
+    endif
+  else
+    assign mp_config = metaobjects['$app:membership_config']['default']
+    if mp_config == blank
+      assign mp_config = shop.metaobjects['$app:membership_config']['default']
+    endif
+    if mp_config == blank
+      assign mp_config = metaobjects.membership_config.default
+    endif
+    if mp_config == blank
+      assign mp_config = shop.metaobjects.membership_config.default
+    endif
+
+    if mp_config != blank
+      if mp_config.member_label.value != blank
+        assign mp_member_label = mp_config.member_label.value
+      endif
+
+      if mp_config.metafield_source.value == 'linked' or mp_config.metafield_source.value == 'custom'
+        assign mp_metafield_source = 'linked'
+      elsif mp_config.metafield_source.value == 'app'
+        assign mp_metafield_source = 'app'
+      elsif mp_config.linked_product_member_price.value != blank
+        assign mp_metafield_source = 'linked'
+      endif
+
+      if mp_config.linked_product_member_price.value != blank
+        assign mp_product_handle = mp_config.linked_product_member_price.value
+      endif
+      if mp_config.linked_variant_member_price.value != blank
+        assign mp_variant_handle = mp_config.linked_variant_member_price.value
+      endif
+      if mp_config.linked_campaign.value != blank
+        assign mp_campaign_handle = mp_config.linked_campaign.value
+      endif
+    endif
+  endif
+
+  assign mp_product_parts = mp_product_handle | split: '.'
+  assign mp_variant_parts = mp_variant_handle | split: '.'
+  assign mp_campaign_parts = mp_campaign_handle | split: '.'
+  assign mp_product_ns = mp_product_parts[0]
+  assign mp_product_key = mp_product_parts[1]
+  assign mp_variant_ns = mp_variant_parts[0]
+  assign mp_variant_key = mp_variant_parts[1]
+  assign mp_campaign_ns = mp_campaign_parts[0]
+  assign mp_campaign_key = mp_campaign_parts[1]
+
+  assign block_id = block.id | default: section.id
   assign current_variant = product.selected_or_first_available_variant
   assign rrp_cents = current_variant.price
   assign member_cents = 0
   assign member_metafield = blank
 
   if mp_metafield_source == 'linked'
-    assign product_handle = mp_config.linked_product_member_price.value | default: 'custom.member_price'
-    assign variant_handle = mp_config.linked_variant_member_price.value | default: 'custom.variant_member_price'
-    assign campaign_handle = mp_config.linked_campaign.value | default: 'custom.cross_rrp'
-    assign product_parts = product_handle | split: '.'
-    assign variant_parts = variant_handle | split: '.'
-    assign campaign_parts = campaign_handle | split: '.'
-    assign product_ns = product_parts[0]
-    assign product_key = product_parts[1]
-    assign variant_ns = variant_parts[0]
-    assign variant_key = variant_parts[1]
-    assign campaign_ns = campaign_parts[0]
-    assign campaign_key = campaign_parts[1]
-    assign variant_member_metafield = current_variant.metafields[variant_ns][variant_key]
-    assign product_member_metafield = product.metafields[product_ns][product_key]
-    assign campaign_metafield = product.metafields[campaign_ns][campaign_key]
+    assign variant_member_metafield = current_variant.metafields[mp_variant_ns][mp_variant_key]
+    assign product_member_metafield = product.metafields[mp_product_ns][mp_product_key]
+    assign campaign_metafield = product.metafields[mp_campaign_ns][mp_campaign_key]
   else
     assign variant_app_metafield = current_variant.metafields['$app'].member_price
     assign variant_dot_app_metafield = current_variant.metafields.app.member_price
@@ -86,17 +138,29 @@
   endif
 -%}
 
-{%- if has_member_price -%}
+{%- if request.design_mode and has_member_price == false -%}
+  <div
+    class="member-pricing member-pricing--pdp"
+    data-member-pricing-block="{{ block_id }}"
+    {{ block.shopify_attributes }}
+  >
+    <p class="member-pricing__placeholder">
+      Member pricing appears here when a product or variant has a Member price metafield lower than the regular price.
+    </p>
+  </div>
+{%- else -%}
   <div
     class="member-pricing member-pricing--pdp"
     data-member-pricing-block="{{ block_id }}"
     {{ block.shopify_attributes }}
   >
     <div class="member-pricing__prices" data-member-pricing-prices>
-      <span class="member-pricing__member">
-        <span class="member-pricing__member-label">{{ mp_member_label | escape }}</span>
-        <span class="member-pricing__member-amount" data-member-pricing-member>{{ member_cents | money }}</span>
-      </span>
+      {%- if has_member_price -%}
+        <span class="member-pricing__member">
+          <span class="member-pricing__member-label">{{ mp_member_label | escape }}</span>
+          <span class="member-pricing__member-amount" data-member-pricing-member>{{ member_cents | money }}</span>
+        </span>
+      {%- endif -%}
       <span
         class="member-pricing__rrp{% if campaign_strike %} member-pricing__rrp--strike{% endif %}"
         data-member-pricing-rrp
@@ -106,26 +170,38 @@
       </span>
     </div>
 
-    <p class="member-pricing__login-hint" data-member-pricing-login-hint>
-      <span class="member-pricing__login-icon" aria-hidden="true">&#128161;</span>
-      To get this product at member price, please
-      <a href="{{ routes.account_login_url }}?return_url={{ request.path | url_encode }}">login</a>
-      to your account first.
-    </p>
+    {%- if has_member_price -%}
+      <p class="member-pricing__login-hint" data-member-pricing-login-hint>
+        <span class="member-pricing__login-icon" aria-hidden="true">&#128161;</span>
+        To get this product at member price, please
+        <a href="{{ routes.account_login_url }}?return_url={{ request.path | url_encode }}">login</a>
+        to your account first.
+      </p>
+    {%- endif -%}
   </div>
 
   <script type="application/json" data-member-pricing-variants="{{ block_id }}">
     {
       "moneyFormat": {{ shop.money_format | json }},
+      "memberLabel": {{ mp_member_label | json }},
       "variants": [
         {%- for variant in product.variants -%}
           {%- liquid
             if mp_metafield_source == 'linked'
-              assign v_member_metafield = variant.metafields[variant_ns][variant_key] | default: product.metafields[product_ns][product_key]
-              assign v_campaign = product.metafields[campaign_ns][campaign_key].value
+              assign v_member_metafield = variant.metafields[mp_variant_ns][mp_variant_key]
+              if v_member_metafield == blank
+                assign v_member_metafield = product.metafields[mp_product_ns][mp_product_key]
+              endif
+              assign v_campaign = product.metafields[mp_campaign_ns][mp_campaign_key].value
             else
-              assign v_member_metafield = variant.metafields['$app'].member_price | default: product.metafields['$app'].member_price
-              assign v_campaign = product.metafields['$app'].campaign.value
+              assign v_member_metafield = variant.metafields['$app'].member_price
+              if v_member_metafield == blank
+                assign v_member_metafield = variant.metafields.app.member_price
+              endif
+              if v_member_metafield == blank
+                assign v_member_metafield = product.metafields['$app'].member_price | default: product.metafields.app.member_price
+              endif
+              assign v_campaign = product.metafields['$app'].campaign.value | default: product.metafields.app.campaign.value
             endif
             assign v_member_cents = 0
             if v_member_metafield != blank and v_member_metafield.value != blank
@@ -146,22 +222,6 @@
       ]
     }
   </script>
-{%- elsif request.design_mode -%}
-  <div
-    class="member-pricing member-pricing--pdp"
-    data-member-pricing-block="{{ block_id }}"
-    {{ block.shopify_attributes }}
-  >
-    <p class="member-pricing__placeholder">
-      Member pricing appears here when a product or variant has a Member price metafield lower than the regular price.
-    </p>
-  </div>
-{%- else -%}
-  <div class="member-pricing member-pricing--pdp member-pricing--pdp-fallback" {{ block.shopify_attributes }}>
-    <p class="member-pricing__regular-only">
-      <span class="member-pricing__regular-amount">{{ current_variant.price | money }}</span>
-    </p>
-  </div>
 {%- endif -%}
 
 {% schema %}

@@ -8,6 +8,9 @@ export const MEMBERSHIP_CONFIG_METAOBJECT_TYPE = "$app:membership_config";
 
 export const MEMBERSHIP_DISCOUNT_METAFIELD_KEY = "membership_config";
 
+/** Shop JSON metafield read by the theme extension for storefront pricing. */
+export const STOREFRONT_CONFIG_METAFIELD_KEY = "storefront_config";
+
 export const MEMBERSHIP_DISCOUNT_TITLE = "MemberPro";
 
 /** Previous checkout discount title — kept for existing installs. */
@@ -91,6 +94,21 @@ export function parseMetafieldHandle(value: unknown): MetafieldRef | null {
 
 export function formatMetafieldHandle(ref: MetafieldRef): string {
   return `${ref.namespace}.${ref.key}`;
+}
+
+export function storefrontConfigJson(config: MembershipConfig): string {
+  return JSON.stringify({
+    metafieldSource: config.metafieldSource,
+    memberLabel: config.memberLabel,
+    savingsLabel: config.savingsLabel,
+    linkedProductMemberPrice: formatMetafieldHandle(
+      config.linkedMetafields.productMemberPrice,
+    ),
+    linkedVariantMemberPrice: formatMetafieldHandle(
+      config.linkedMetafields.variantMemberPrice,
+    ),
+    linkedCampaign: formatMetafieldHandle(config.linkedMetafields.campaign),
+  });
 }
 
 export function refsEqual(a: MetafieldRef, b: MetafieldRef): boolean {

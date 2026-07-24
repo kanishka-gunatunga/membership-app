@@ -114,7 +114,7 @@
   padding: 0.2rem 0;
   font-family: inherit;
   font-weight: 400;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1;
   letter-spacing: 0;
   color: #424242;
@@ -129,7 +129,7 @@
   margin: 0;
   padding: 0.2rem 0;
   font-family: inherit;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1;
   letter-spacing: 0;
   color: #000000;
@@ -154,7 +154,7 @@
   margin: 0;
   padding: 0.35rem 0;
   font-family: inherit;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1;
   letter-spacing: 0;
   color: #000000;
@@ -199,12 +199,6 @@
 
 .member-pricing__cart-rrp {
   opacity: 0.75;
-}
-
-/* Hide duplicate cart line totals when discount already shows price in details */
-tr.cart-item:has(.cart-item__details .cart-item__discounted-prices):has(.cart-item__details .discounts__discount) > td.cart-item__totals,
-.cart-item:has(.cart-item__details .cart-item__discounted-prices):has(.cart-item__details .discounts__discount) > .cart-item__totals {
-  display: none !important;
 }
 
 .member-pricing__placeholder {

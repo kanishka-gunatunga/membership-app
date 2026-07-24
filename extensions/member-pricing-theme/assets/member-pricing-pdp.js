@@ -40,10 +40,12 @@
     );
   }
 
-  function memberPricesHtml(variant, moneyFormat) {
+  function memberPricesHtml(variant, moneyFormat, memberLabel) {
     return (
       '<span class="member-pricing__member">' +
-      '<span class="member-pricing__member-label">Member</span> ' +
+      '<span class="member-pricing__member-label">' +
+      (memberLabel || 'Member price') +
+      '</span> ' +
       '<span class="member-pricing__member-amount" data-member-pricing-member>' +
       formatMoney(variant.memberCents, moneyFormat) +
       '</span></span>' +
@@ -59,11 +61,11 @@
     );
   }
 
-  function renderMemberPricing(block, variant, moneyFormat) {
+  function renderMemberPricing(block, variant, moneyFormat, memberLabel) {
     var pricesEl = block.querySelector('[data-member-pricing-prices]');
 
     if (pricesEl) {
-      pricesEl.innerHTML = memberPricesHtml(variant, moneyFormat);
+      pricesEl.innerHTML = memberPricesHtml(variant, moneyFormat, memberLabel);
       if (!block.querySelector('[data-member-pricing-login-hint]')) {
         block.insertAdjacentHTML('beforeend', loginHintHtml());
       }
@@ -73,18 +75,37 @@
     block.className = 'member-pricing member-pricing--pdp';
     block.innerHTML =
       '<div class="member-pricing__prices" data-member-pricing-prices">' +
-      memberPricesHtml(variant, moneyFormat) +
+      memberPricesHtml(variant, moneyFormat, memberLabel) +
       '</div>' +
       loginHintHtml();
   }
 
-  function renderRegularPrice(block, rrpCents, moneyFormat) {
-    block.className = 'member-pricing member-pricing--pdp member-pricing--pdp-fallback';
+  function renderRrpOnly(block, variant, moneyFormat) {
+    var pricesEl = block.querySelector('[data-member-pricing-prices]');
+    var rrpHtml =
+      '<span class="member-pricing__rrp' +
+      (variant.campaignStrike ? ' member-pricing__rrp--strike' : '') +
+      '" data-member-pricing-rrp data-campaign-strike="' +
+      Boolean(variant.campaignStrike) +
+      '">' +
+      '<span class="member-pricing__rrp-label">RRP</span> ' +
+      '<span class="member-pricing__rrp-amount" data-member-pricing-rrp-amount>' +
+      formatMoney(variant.rrpCents, moneyFormat) +
+      '</span></span>';
+
+    var loginHint = block.querySelector('[data-member-pricing-login-hint]');
+    if (loginHint) loginHint.remove();
+
+    if (pricesEl) {
+      pricesEl.innerHTML = rrpHtml;
+      return;
+    }
+
+    block.className = 'member-pricing member-pricing--pdp';
     block.innerHTML =
-      '<p class="member-pricing__regular-only">' +
-      '<span class="member-pricing__regular-amount">' +
-      formatMoney(rrpCents, moneyFormat) +
-      '</span></p>';
+      '<div class="member-pricing__prices" data-member-pricing-prices">' +
+      rrpHtml +
+      '</div>';
   }
 
   function updateBlock(block, variantId) {
@@ -100,9 +121,9 @@
       variant.memberCents > 0 && variant.rrpCents > variant.memberCents;
 
     if (hasMemberPrice) {
-      renderMemberPricing(block, variant, data.moneyFormat);
+      renderMemberPricing(block, variant, data.moneyFormat, data.memberLabel);
     } else {
-      renderRegularPrice(block, variant.rrpCents, data.moneyFormat);
+      renderRrpOnly(block, variant, data.moneyFormat);
     }
   }
 
